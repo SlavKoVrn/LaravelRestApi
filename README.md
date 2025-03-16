@@ -1,25 +1,36 @@
 <h2>REST API</h2>
+
 <h3>AdminLTE</h3>
+
 Step 1: Install Laravel
+
 ```php
 composer create-project laravel/laravel restapi
 ```
+
 Step 2: Install jeroennoten/laravel-adminlte
+
 ```php
 composer require jeroennoten/laravel-adminlte
 ```
+
 Step 3: Install AdminLTE 3 Theme
+
 ```php
 php artisan adminlte:install
 ```
+
 Step 4: Install Laravel UI for Auth Scaffolding
+
 ```php
 composer require laravel/ui
 npm install & npm run dev
 php artisan ui bootstrap --auth
 php artisan adminlte:install --only=auth_views
 ```
+
 Step 5: Use AdminLTE Sections
+
 ```php
 resources/views/home.blade.php
 @extends('adminlte::page')
@@ -43,6 +54,7 @@ resources/views/home.blade.php
     <script> console.log("Laravel AdminLTE"); </script>
 @stop
 ```
+
 
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400"></a></p>
 
