@@ -68,6 +68,59 @@ resources/views/home.blade.php
 @stop
 ```
 
+<h3>Create table News</h3>
+
+create a `News` model
+
+```bash
+php artisan make:model News -m
+```
+
+This command creates:
+- A `News` model (`app/Models/News.php`)
+- A migration file for the `news` table (`database/migrations/xxxx_xx_xx_create_news_table.php`)
+
+Edit the migration file to define the structure of the `news` table:
+
+```php
+// database/migrations/xxxx_xx_xx_create_news_table.php
+    public function up()
+    {
+        Schema::create('news', function (Blueprint $table) {
+
+            $table->id();
+            $table->tinyInteger('active')->default(0)->index(); // 0 = inactive, 1 = active
+            $table->timestamp('created_at')->default(\DB::raw('CURRENT_TIMESTAMP'))->index();
+            $table->timestamp('updated_at')->default(\DB::raw('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))->index();
+            $table->string('title')->index();
+            $table->text('content');
+
+        });
+    }
+```
+
+Run the migration to create the table:
+
+```bash
+php artisan migrate
+```
+
+`News` model:
+
+```php
+// app/Models/News.php
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class News extends Model
+{
+    use HasFactory;
+
+    protected $fillable = ['title', 'content', 'active'];
+}
+```
 
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400"></a></p>
 
