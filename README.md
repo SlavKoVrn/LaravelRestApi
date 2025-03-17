@@ -122,6 +122,38 @@ class News extends Model
 }
 ```
 
+<h3>Create NewsController</h3>
+
+In Laravel, the resource controller pattern is used to automatically create routes for CRUD (Create, Read, Update, Delete) operations
+
+```php
+php artisan make:controller NewsController --api
+```
+
+route in routes/api.php:
+
+```php
+use App\Http\Controllers\NewsController;
+
+Route::apiResource('news', NewsController::class);
+```
+
+Below are the definitions of the following routes:
+
+```php
+GET /api/news:  Fetch all news
+GET /api/news/{id}:  Fetch a specific news
+POST /api/news:  Create a new news
+PUT/PATCH /api/news/{id}:  Update an existing news
+DELETE /api/news/{id}:  Delete a news
+```
+
+<h3>Test NewsController</h3>
+
+```php
+php vendor/bin/phpunit tests/Feature/ApiTest.php
+```
+
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400"></a></p>
 
 <p align="center">
