@@ -81,7 +81,7 @@ class ApiTest extends TestCase
     }
 
     /** @test */
-    public function it_can_delete_a_post()
+    public function it_can_delete_a_news()
     {
         $news = News::factory()->create();
 
