@@ -122,7 +122,13 @@ class News extends Model
 }
 ```
 
-<h3>Create NewsController</h3>
+<h3>Create API NewsController</h3>
+
+In Laravel 12
+
+```php
+php artisan install:api
+```
 
 In Laravel, the resource controller pattern is used to automatically create routes for CRUD (Create, Read, Update, Delete) operations
 
