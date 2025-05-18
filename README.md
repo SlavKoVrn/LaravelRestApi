@@ -1,6 +1,9 @@
 <h2>Вакансия: PHP-разработчик, laravel</h2>
+
 <h2>компании: JeLeApps</h2>
+
 <h3>Развернуть проект</h3>
+
 ```php
 git clone https://github.com/SlavKoVrn/LaravelRestApi profile
 cd profile
@@ -8,7 +11,9 @@ composer install
 copy .env.example .env
 php artisan key:generate
 ```
+
 <h3>Создать базу данных и привязать к проекту в файле .env</h3>
+
 ```php
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
@@ -17,8 +22,11 @@ DB_DATABASE=api
 DB_USERNAME=root
 DB_PASSWORD=password
 ```
+
 <h3>Разработать метод апи «Регистрация нового юзера» api/registration с параметрами email, password, gender</h3>
+
 <h4>1. добавить в миграцию поле gender файл database/migrations/2014_10_12_000000_create_users_table.php</h4>
+
 ```php
     public function up()
     {
@@ -34,7 +42,9 @@ DB_PASSWORD=password
         });
     }
 ```
+
 <h4>2. Установить пароль в seeder database/seeders/DatabaseSeeder.php для создания в базе пользователя с известным паролем</h4>
+
 ```php
 use Illuminate\Support\Facades\Hash;
     public function run()
@@ -46,15 +56,21 @@ use Illuminate\Support\Facades\Hash;
         ]);
     }
 ```
+
 <h4>3. выполнить миграцию базы данных</h4>
+
 ```php
 php artisan migrate --seed
 ```
+
 <h4>4. создать контроллер для регистрации</h4>
+
 ```php
 php artisan make:controller Api/AuthController
 ```
+
 <h4>5. добавить логику выполнения регистрации в файл app/Http/Controllers/Api/AuthController.php</h4>
+
 ```php
 namespace App\Http\Controllers\Api;
 
@@ -85,12 +101,16 @@ class AuthController extends Controller
     }
 }
 ```
+
 <h4>6. добавить route для контролера регистрации файл routes/api.php</h4>
+
 ```php
 use App\Http\Controllers\Api\AuthController;
 Route::post('/register', [AuthController::class, 'register']);
 ```
+
 <h4>7. проверка работы api/register тест файл tests/Feature/RegisterTest.php</h4>
+
 ```php
 namespace Tests\Feature;
 
@@ -125,17 +145,23 @@ class RegisterTest extends TestCase
     }
 }
 ```
+
 <h4>8. запуск теста проверки работы контроллера регистрации</h4>
+
 ```php
 php artisan test --filter RegisterTest
 ```
 
 <h3>Разработать апи метод api/profile для выдачи данных Пользователя</h3>
+
 <h4>1.создать контроллер app/Http/Controllers/Api/ProfileController.php</h4>
+
 ```php
 php artisan make:controller Api/ProfileController
 ```
+
 <h4>2.добавить логику в контроллер </h4>
+
 ```php
 namespace App\Http\Controllers\Api;
 
@@ -150,14 +176,18 @@ class ProfileController extends Controller
     }
 }
 ```
+
 <h4>3. добавить route для контролера получения профиля файл routes/api.php</h4>
+
 ```php
 use App\Http\Controllers\Api\ProfileController;
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/profile', [ProfileController::class, 'show']);
 });
 ```
+
 <h4>4. проверка работы api/profile тест файл tests/Feature/ProfileTest.php</h4>
+
 ```php
 namespace Tests\Feature;
 
@@ -202,7 +232,9 @@ class ProfileTest extends TestCase
     }
 }
 ```
+
 <h4>5. запуск теста проверки работы контроллера получения профиля зарегистрированного пользователя</h4>
+
 ```php
 php artisan test --filter ProfileTest
 ```
