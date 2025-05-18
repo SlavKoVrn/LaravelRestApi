@@ -1,3 +1,212 @@
+<h2>Вакансия: PHP-разработчик, laravel</h2>
+<h2>компании: JeLeApps</h2>
+<h3>Развернуть проект</h3>
+```php
+git clone https://github.com/SlavKoVrn/LaravelRestApi profile
+cd profile
+composer install
+copy .env.example .env
+php artisan key:generate
+```
+<h3>Создать базу данных и привязать к проекту в файле .env</h3>
+```php
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=api
+DB_USERNAME=root
+DB_PASSWORD=password
+```
+<h3>Разработать метод апи «Регистрация нового юзера» api/registration с параметрами email, password, gender</h3>
+<h4>1. добавить в миграцию поле gender файл database/migrations/2014_10_12_000000_create_users_table.php</h4>
+```php
+    public function up()
+    {
+        Schema::create('users', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('email')->unique();
+            $table->timestamp('email_verified_at')->nullable();
+            $table->string('password');
+            $table->string('gender')->nullable();
+            $table->rememberToken();
+            $table->timestamps();
+        });
+    }
+```
+<h4>2. Установить пароль в seeder database/seeders/DatabaseSeeder.php для создания в базе пользователя с известным паролем</h4>
+```php
+use Illuminate\Support\Facades\Hash;
+    public function run()
+    {
+        \App\Models\User::factory()->create([
+            'name' => 'Test User',
+            'email' => 'test@example.com',
+            'password' => Hash::make('123456'),
+        ]);
+    }
+```
+<h4>3. выполнить миграцию базы данных</h4>
+```php
+php artisan migrate --seed
+```
+<h4>4. создать контроллер для регистрации</h4>
+```php
+php artisan make:controller Api/AuthController
+```
+<h4>5. добавить логику выполнения регистрации в файл app/Http/Controllers/Api/AuthController.php</h4>
+```php
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
+
+class AuthController extends Controller
+{
+    public function register(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|unique:users',
+            'email' => 'required|email|unique:users',
+            'password' => 'required|min:6',
+            'gender' => 'nullable|string|in:male,female,other',
+        ]);
+
+        $validated['password'] = Hash::make($request->password);
+
+        $user = User::create($validated);
+
+        return response()->json([
+            'message' => 'User registered successfully',
+            'user' => $user
+        ], 201);
+    }
+}
+```
+<h4>6. добавить route для контролера регистрации файл routes/api.php</h4>
+```php
+use App\Http\Controllers\Api\AuthController;
+Route::post('/register', [AuthController::class, 'register']);
+```
+<h4>7. проверка работы api/register тест файл tests/Feature/RegisterTest.php</h4>
+```php
+namespace Tests\Feature;
+
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class RegisterTest extends TestCase
+{
+    use RefreshDatabase;
+
+    /** @test */
+    public function test_user_can_register()
+    {
+        $response = $this->postJson('/api/register', [
+            'name' => 'John Doe',
+            'email' => 'john@example.com',
+            'password' => 'password123',
+            'gender' => 'male'
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJson([
+                'message' => 'User registered successfully',
+            ]);
+
+        // Проверяем, что пользователь создан в БД
+        $this->assertDatabaseHas('users', [
+            'name' => 'John Doe',
+            'email' => 'john@example.com',
+        ]);
+    }
+}
+```
+<h4>8. запуск теста проверки работы контроллера регистрации</h4>
+```php
+php artisan test --filter RegisterTest
+```
+
+<h3>Разработать апи метод api/profile для выдачи данных Пользователя</h3>
+<h4>1.создать контроллер app/Http/Controllers/Api/ProfileController.php</h4>
+```php
+php artisan make:controller Api/ProfileController
+```
+<h4>2.добавить логику в контроллер </h4>
+```php
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
+
+class ProfileController extends Controller
+{
+    public function show()
+    {
+        return response()->json(Auth::user());
+    }
+}
+```
+<h4>3. добавить route для контролера получения профиля файл routes/api.php</h4>
+```php
+use App\Http\Controllers\Api\ProfileController;
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'show']);
+});
+```
+<h4>4. проверка работы api/profile тест файл tests/Feature/ProfileTest.php</h4>
+```php
+namespace Tests\Feature;
+
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class ProfileTest extends TestCase
+{
+    use RefreshDatabase;
+
+    /** @test */
+    public function authenticated_user_can_access_profile()
+    {
+        // Создаем пользователя
+        $user = User::factory()->create();
+
+        // Генерируем Sanctum токен
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        // Делаем GET-запрос с токеном
+        $response = $this->withHeaders([
+            'Authorization' => 'Bearer ' . $token,
+        ])->getJson('/api/profile');
+
+        // Проверяем ответ
+        $response->assertStatus(200)
+            ->assertJson([
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+            ]);
+    }
+
+    /** @test */
+    public function unauthenticated_user_cannot_access_profile()
+    {
+        $response = $this->getJson('/api/profile');
+
+        // Ожидаем ошибку 401 - Unauthorized
+        $response->assertStatus(401);
+    }
+}
+```
+<h4>5. запуск теста проверки работы контроллера получения профиля зарегистрированного пользователя</h4>
+```php
+php artisan test --filter ProfileTest
+```
+
 <h2>REST API</h2>
 
 <h3>AdminLTE</h3>
