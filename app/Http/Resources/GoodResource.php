@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Helpers\CurrencyHelper;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class GoodResource extends JsonResource
@@ -18,13 +19,15 @@ class GoodResource extends JsonResource
 
         $priceRub = $this->rub;
 
+        $rates = CurrencyHelper::exchangeRates();
+
         switch ($currency) {
             case 'USD':
-                $convertedPrice = number_format($priceRub / 90, 2, '.', '');
+                $convertedPrice = number_format($priceRub / $rates['USD'], 2, '.', '');
                 $formattedPrice = '$' . $convertedPrice;
                 break;
             case 'EUR':
-                $convertedPrice = number_format($priceRub / 100, 2, '.', '');
+                $convertedPrice = number_format($priceRub / $rates['EUR'], 2, '.', '');
                 $formattedPrice = '€' . $convertedPrice;
                 break;
             case 'RUB':
