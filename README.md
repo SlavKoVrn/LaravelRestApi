@@ -13,9 +13,11 @@
 
 ```bash
 php artisan make:model Good -mf
+```
 
-// database/migrations/xxxx_xx_xx_create_goods_table.php
+database/migrations/2025_07_03_045235_create_goods_table.php
 
+```bash
 public function up()
 {
     Schema::create('goods', function (Blueprint $table) {
@@ -34,11 +36,15 @@ php artisan migrate
 
 <h4>2. заполнение тестовыми данными</h4>
 
-создайте фабрику `database/factories/GoodFactory.php`
+создайте фабрику
 
 ```bash
 php artisan make:factory GoodFactory --model=Good
+```
 
+database/factories/GoodFactory.php
+
+```bash
 namespace Database\Factories;
 
 use App\Models\Good;
@@ -65,11 +71,13 @@ class GoodFactory extends Factory
 }
 ```
 
-seeder продуктов `database/seeders/GoodSeeder.php`
+seeder продуктов
 
 ```bash
 php artisan make:seeder GoodSeeder
 ```
+
+database/seeders/GoodSeeder.php
 
 ```php
 namespace Database\Seeders;
@@ -93,7 +101,88 @@ class GoodSeeder extends Seeder
 php artisan db:seed --class=GoodSeeder
 ```
 
+<h4>3. Создайте Resource для модели</h4>
 
+```bash
+php artisan make:resource GoodResource
+```
+
+app/Http/Resources/GoodResource.php
+
+```php
+namespace App\Http\Resources;
+
+use Illuminate\Http\Resources\Json\JsonResource;
+
+class GoodResource extends JsonResource
+{
+    public function toArray($request)
+    {
+        $currency = strtoupper($request->input('currency', 'RUB'));
+
+        $priceRub = $this->rub;
+
+        switch ($currency) {
+            case 'USD':
+                $convertedPrice = number_format($priceRub / 90, 2, '.', '');
+                $formattedPrice = '$' . $convertedPrice;
+                break;
+            case 'EUR':
+                $convertedPrice = number_format($priceRub / 100, 2, '.', '');
+                $formattedPrice = '€' . $convertedPrice;
+                break;
+            case 'RUB':
+            default:
+                $convertedPrice = number_format($priceRub, 0, '', ' ');
+                $formattedPrice = "$convertedPrice ₽";
+                break;
+        }
+
+        return [
+            'id' => $this->id,
+            'title' => $this->title,
+            'price' => $formattedPrice,
+        ];
+    }
+}
+```
+
+<h4>4. Создайте контроллер</h4>
+
+```bash
+php artisan make:controller Api/GoodController --api
+```
+
+app/Http/Controllers/Api/GoodController.php
+
+```php
+namespace App\Http\Controllers\Api;
+
+use App\Models\Good;
+use App\Http\Resources\GoodResource;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+
+class ProductController extends Controller
+{
+    public function index(Request $request)
+    {
+        $goods = Good::all();
+
+        return GoodResource::collection($goods);
+    }
+}
+```
+
+<h4>5. Добавьте маршрут</h4>
+
+в `routes/api.php`:
+
+```php
+use App\Http\Controllers\Api\GoodController;
+
+Route::get('/prices', [GoodController::class, 'index']);
+```
 
 
 <h2>Вакансия: PHP-разработчик, laravel</h2>
