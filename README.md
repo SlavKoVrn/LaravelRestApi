@@ -9,6 +9,93 @@
 Используйте Laravel 8+ и Laravel Resource. Ответ — в формате JSON.
 ```
 
+<h4>1. Создайте модель и миграцию</h4>
+
+```bash
+php artisan make:model Good -mf
+
+// database/migrations/xxxx_xx_xx_create_goods_table.php
+
+public function up()
+{
+    Schema::create('goods', function (Blueprint $table) {
+        $table->id();
+        $table->string('title');
+        $table->unsignedInteger('rub'); // цена в рублях
+    });
+}
+```
+
+выполните миграцию:
+
+```bash
+php artisan migrate
+```
+
+<h4>2. заполнение тестовыми данными</h4>
+
+создайте фабрику `database/factories/GoodFactory.php`
+
+```bash
+php artisan make:factory GoodFactory --model=Good
+
+namespace Database\Factories;
+
+use App\Models\Good;
+use Illuminate\Database\Eloquent\Factories\Factory;
+
+class GoodFactory extends Factory
+{
+    protected $model = Good::class;
+
+    /**
+     * Define the model's default state.
+     *
+     * @return array
+     */
+    public function definition()
+    {
+        $this->faker = \Faker\Factory::create('ru_RU');
+
+        return [
+            'title' => $this->faker->sentence(5), // Random title with 5 words
+            'rub' => random_int(10, 1000),
+        ];
+    }
+}
+```
+
+seeder продуктов `database/seeders/GoodSeeder.php`
+
+```bash
+php artisan make:seeder GoodSeeder
+```
+
+```php
+namespace Database\Seeders;
+
+use App\Models\Good;
+use App\Models\ProductFactory;
+use Illuminate\Database\Seeder;
+
+class GoodSeeder extends Seeder
+{
+    public function run()
+    {
+        \App\Models\Good::factory(100)->create();
+    }
+}
+```
+
+запустите сидер:
+
+```bash
+php artisan db:seed --class=GoodSeeder
+```
+
+
+
+
 <h2>Вакансия: PHP-разработчик, laravel</h2>
 
 <h2>компании: JeLeApps</h2>
