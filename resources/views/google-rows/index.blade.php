@@ -26,6 +26,10 @@
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
 
+    <div class="row row-md-12">
+        <strong><x-pagination-summary :paginator="$googleRows" /></strong>
+    </div>
+
     <table class="table table-bordered">
         <thead>
             <tr>
