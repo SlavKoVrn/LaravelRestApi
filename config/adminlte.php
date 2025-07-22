@@ -317,12 +317,17 @@ return [
         ],
         [
             'text' => 'blog',
-            'url' => 'admin/blog',
+            'url' => '/',
             'can' => 'manage-blog',
         ],
         [
+            'text' => 'Google Sheet rows',
+            'url' => 'google-rows',
+            'icon' => 'far fa-fw fa-file',
+        ],
+        [
             'text' => 'pages',
-            'url' => 'admin/pages',
+            'url' => '/',
             'icon' => 'far fa-fw fa-file',
             'label' => 4,
             'label_color' => 'success',
