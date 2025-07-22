@@ -29,3 +29,7 @@
     <a href="{{ route('google-rows.index') }}" class="btn btn-secondary">Back</a>
 </div>
 @endsection
+
+@section('js')
+    @include('sidebar_collapse')
+@stop

@@ -40,3 +40,7 @@
     </form>
 </div>
 @endsection
+
+@section('js')
+    @include('sidebar_collapse')
+@stop
