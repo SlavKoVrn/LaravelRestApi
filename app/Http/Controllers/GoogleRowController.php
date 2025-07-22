@@ -70,7 +70,6 @@ class GoogleRowController extends Controller
     public function update(Request $request, GoogleRow $googleRow)
     {
         $validator = Validator::make($request->all(), [
-            'google_row' => 'required|string|max:10|unique:google_rows,google_row,' . $googleRow->id,
             'text'       => 'required|string|max:255',
             'status'     => 'required|in:Allowed,Prohibited',
         ]);
@@ -79,7 +78,7 @@ class GoogleRowController extends Controller
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
-        $googleRow->update($request->only(['google_row', 'text', 'status']));
+        $googleRow->update($request->only(['text', 'status']));
 
         return redirect()->route('google-rows.index')
             ->with('success', 'Row updated successfully.');

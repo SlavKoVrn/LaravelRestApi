@@ -15,13 +15,26 @@
 @endsection
 
 @section('content')
+@if ($errors->any())
+    <div class="alert alert-danger">
+        <ul>
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
 <div class="container">
     <form action="{{ route('google-rows.update', $googleRow) }}" method="POST">
         @csrf
         @method('PUT')
         <div class="mb-3">
             <label>Google Row</label>
-            <input type="text" name="google_row" class="form-control" value="{{ old('google_row', $googleRow->google_row) }}" required>
+            <input type="text"
+                   name="google_row"
+                   class="form-control"
+                   value="{{ old('google_row', $googleRow->google_row) }}"
+                   readonly>
         </div>
         <div class="mb-3">
             <label>Text</label>

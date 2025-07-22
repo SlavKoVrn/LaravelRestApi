@@ -30,6 +30,12 @@
         <strong><x-pagination-summary :paginator="$googleRows" /></strong>
     </div>
 
+    @if($googleRows->count() > 0)
+        <div class="d-flex justify-content-center">
+            {{ $googleRows->links('pagination::bootstrap-4') }}
+        </div>
+    @endif
+
     <table class="table table-bordered">
         <thead>
             <tr>
@@ -64,9 +70,11 @@
         </tbody>
     </table>
 
-    <div class="d-flex justify-content-center">
-        {{ $googleRows->links('pagination::bootstrap-4') }}
-    </div>
+    @if($googleRows->count() > 0)
+        <div class="d-flex justify-content-center">
+            {{ $googleRows->links('pagination::bootstrap-4') }}
+        </div>
+    @endif
 
 </div>
 @endsection
