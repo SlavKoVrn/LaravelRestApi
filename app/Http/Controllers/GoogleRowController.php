@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\GoogleRow;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Carbon;
 
 class GoogleRowController extends Controller
 {
@@ -13,7 +15,7 @@ class GoogleRowController extends Controller
      */
     public function index()
     {
-        $googleRows = GoogleRow::orderBy('created_at', 'desc')->paginate(10);
+        $googleRows = GoogleRow::orderBy('id', 'asc')->paginate(20);
         return view('google-rows.index', compact('googleRows'));
     }
 
@@ -93,4 +95,49 @@ class GoogleRowController extends Controller
         return redirect()->route('google-rows.index')
             ->with('success', 'Row deleted successfully.');
     }
+
+    public function generateRows()
+    {
+        $count = 1000;
+        $batchSize = 500;
+
+        DB::transaction(function () use ($count, $batchSize) {
+            $data = [];
+
+            for ($i = 1; $i <= $count; $i++) {
+                $rowNumber = $i + 1;
+                $status = rand(0, 1) ? 'Allowed' : 'Prohibited';
+                $text = "Row $i";
+
+                $data[] = [
+                    'google_row' => '',
+                    'text'       => rtrim($text, '.'),
+                    'status'     => $status,
+                    'created_at' => Carbon::now(),
+                    'updated_at' => Carbon::now(),
+                ];
+
+                // Insert in batches inside the transaction
+                if ($i % $batchSize === 0 || $i === $count) {
+                    GoogleRow::insert($data);
+                    $data = []; // Reset batch
+                }
+            }
+        });
+
+        return redirect()
+            ->route('google-rows.index')
+            ->with('success', "Successfully generated {$count} Google Sheet rows!");
+    }
+
+    public function removeRows()
+    {
+        // Clear existing data? (Optional)
+        GoogleRow::truncate();
+
+        return redirect()
+            ->route('google-rows.index')
+            ->with('success', "Rows truncated!");
+    }
+
 }

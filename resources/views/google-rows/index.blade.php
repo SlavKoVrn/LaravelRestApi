@@ -15,7 +15,12 @@
 
 @section('content')
 <div class="container">
+
     <a href="{{ route('google-rows.create') }}" class="btn btn-success mb-3">Add New Row</a>
+
+    <a href="{{ route('google-rows.generate') }}" class="btn btn-primary mb-3">Generate 1000 Rows</a>
+
+    <a href="{{ route('google-rows.remove') }}" class="btn btn-danger mb-3">Remove All Rows</a>
 
     @if(session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
@@ -55,6 +60,9 @@
         </tbody>
     </table>
 
-    {{ $googleRows->links() }} <!-- Pagination -->
+    <div class="d-flex justify-content-center">
+        {{ $googleRows->links('pagination::bootstrap-4') }}
+    </div>
+
 </div>
 @endsection

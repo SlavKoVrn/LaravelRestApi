@@ -18,6 +18,12 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+Route::get('/google-rows/generate', [GoogleRowController::class, 'generateRows'])
+    ->name('google-rows.generate');
+
+Route::get('/google-rows/remove', [GoogleRowController::class, 'removeRows'])
+    ->name('google-rows.remove');
+
 Auth::routes();
 
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
@@ -27,3 +33,4 @@ Auth::routes();
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
 
 Route::resource('google-rows', GoogleRowController::class);
+
