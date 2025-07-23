@@ -326,6 +326,11 @@ return [
             'icon' => 'far fa-fw fa-file',
         ],
         [
+            'text' => 'Google Tables view',
+            'url' => 'google-tables',
+            'icon' => 'far fa-fw fa-file',
+        ],
+        [
             'text' => 'Database Table view',
             'url' => 'table-view',
             'icon' => 'far fa-fw fa-file',

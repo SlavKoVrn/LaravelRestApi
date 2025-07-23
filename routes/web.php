@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\GoogleRowController;
 use App\Http\Controllers\GoogleLinkController;
+use App\Http\Controllers\GoogleTableController;
 use Illuminate\Support\Facades\Route;
 
 use Illuminate\Http\Request;
@@ -50,6 +51,10 @@ Route::post('/get-table-data', function (Request $request) {
 });
 
 Route::resource('google-links', GoogleLinkController::class);
+//Route::resource('google-tables', GoogleTableController::class);
+Route::get('/google-tables', [GoogleTableController::class, 'index'])
+    ->name('google-tables');
+
 
 Route::get('/', function () {
     return view('welcome');
