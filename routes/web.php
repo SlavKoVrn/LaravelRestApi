@@ -4,6 +4,9 @@ use App\Http\Controllers\GoogleRowController;
 use App\Http\Controllers\GoogleLinkController;
 use Illuminate\Support\Facades\Route;
 
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -14,6 +17,37 @@ use Illuminate\Support\Facades\Route;
 | contains the "web" middleware group. Now create something great!
 |
 */
+Route::get('/table-view', function () {
+    return view('table-view');
+});
+
+Route::post('/get-table-data', function (Request $request) {
+    $tableName = $request->input('table_name');
+
+    // Validate table name (optional: whitelist allowed tables)
+    $allowedTables = DB::select('SHOW TABLES');
+    $tableNames = [];
+    $key = 'Tables_in_' . env('DB_DATABASE'); // MySQL specific
+    foreach ($allowedTables as $table) {
+        $tableNames[] = $table->$key;
+    }
+
+    if (!in_array($tableName, $tableNames)) {
+        return response()->json(['error' => 'Invalid table name.'], 400);
+    }
+
+    try {
+        $columns = Schema::getColumnListing($tableName);
+        $rows = DB::table($tableName)->get();
+
+        return response()->json([
+            'columns' => $columns,
+            'rows' => $rows
+        ]);
+    } catch (\Exception $e) {
+        return response()->json(['error' => 'Failed to fetch data.'], 500);
+    }
+});
 
 Route::resource('google-links', GoogleLinkController::class);
 

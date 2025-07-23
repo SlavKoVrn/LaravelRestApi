@@ -326,6 +326,11 @@ return [
             'icon' => 'far fa-fw fa-file',
         ],
         [
+            'text' => 'Database Table view',
+            'url' => 'table-view',
+            'icon' => 'far fa-fw fa-file',
+        ],
+        [
             'text' => 'pages',
             'url' => '/',
             'icon' => 'far fa-fw fa-file',
