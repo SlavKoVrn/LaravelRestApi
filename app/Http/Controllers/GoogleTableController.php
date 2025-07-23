@@ -38,10 +38,30 @@ class GoogleTableController extends Controller
         $data = null;
         $columns = [];
         if (Schema::hasTable($tableName)) {
-            $data = DB::table($tableName)->paginate(20);
             $columns = DB::select("DESCRIBE `$tableName`");
             // or
             // $columns = DB::select("SHOW COLUMNS FROM `$tableName`");
+
+            // Extract and filter searchable columns
+            $searchableTypes = ['char', 'varchar', 'text', 'tinytext', 'mediumtext', 'longtext'];
+            $searchableColumns = collect($columns)
+                ->filter(function ($column) use ($searchableTypes) {
+                    $type = strtolower($column->Type);
+                    return in_array(explode('(', $type)[0], $searchableTypes);
+                })
+                ->pluck('Field');
+
+            $query = DB::table($tableName);
+
+            if ($search && $searchableColumns->isNotEmpty()) {
+                $query->where(function ($inner) use ($searchableColumns, $search) {
+                    foreach ($searchableColumns as $column) {
+                        $inner->orWhere($column, 'LIKE', '%' . $search . '%');
+                    }
+                });
+            }
+
+            $data = $query->paginate(20);
         }
 
         $googleLinks = GoogleLink::all();
