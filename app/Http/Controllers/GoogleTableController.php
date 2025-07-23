@@ -182,7 +182,11 @@ class GoogleTableController extends Controller
      */
     public function destroy($tableName, $id)
     {
-        DB::table($tableName)->where('id', $id)->delete();
+        try {
+            DB::table($tableName)->where('id', $id)->delete();
+        }catch (\Exception $e){
+            return redirect()->back()->withErrors(['error' =>$e->getMessage()]);
+        }
         return redirect()->back()->with('success', 'Record deleted.');
     }
 }
