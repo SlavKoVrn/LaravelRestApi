@@ -64,7 +64,7 @@
 
     @if($googleLink->google_config)
         <div class="mb-3">
-            <label>Current Config (read-only)</label>
+            <label>Current Config</label>
             <div class="d-flex">
             <textarea id="currentConfig" class="form-control flex-grow-1" rows="10" readonly>
                 {{ $googleLink->google_config }}

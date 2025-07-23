@@ -49,7 +49,7 @@
             <!-- Button -->
             <div class="col-md-3">
                 <label>&nbsp;</label>
-                <button type="submit" class="btn btn-primary btn-block">Select</button>
+                <button type="submit" class="btn btn-primary btn-block">Show</button>
             </div>
         </div>
     </form>
