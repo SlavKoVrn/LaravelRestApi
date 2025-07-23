@@ -31,7 +31,7 @@
         @csrf
         <div class="row flex-nowrap">
             <!-- Select Field -->
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <div class="form-group">
                     <label for="database_table">Select Table</label>
                     <select name="database_table" id="table_id" class="form-control" required>
@@ -46,8 +46,14 @@
                 </div>
             </div>
 
+            <!-- Search -->
+            <div class="col-md-4">
+                <label>Search</label>
+                <input name="search" id="search" class="form-control" value="{{ $search }}" />
+            </div>
+
             <!-- Button -->
-            <div class="col-md-3">
+            <div class="col-md-4">
                 <label>&nbsp;</label>
                 <button type="submit" class="btn btn-primary btn-block">Show</button>
             </div>

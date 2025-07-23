@@ -17,22 +17,26 @@ class GoogleTableController extends Controller
      */
     public function index(Request $request)
     {
-        $googleLinks = GoogleLink::all();
-
-        $googleLink = null;
-        $data = null;
-        $columns = [];
+        $search = null;
+        if ($request->query('search')) {
+            $request->validate([
+                'search' => 'nullable|string',
+            ]);
+            Session::put('search', $request->input('search'));
+        }
+        $search = Session::get('search');
 
         $tableName = null;
         if ($request->query('database_table')) {
             $request->validate([
                 'database_table' => 'required|string',
             ]);
-            $tableName = $request->input('database_table');
-            Session::put('table_name', $tableName);
+            Session::put('table_name', $request->input('database_table'));
         }
-
         $tableName = Session::get('table_name');
+
+        $data = null;
+        $columns = [];
         if (Schema::hasTable($tableName)) {
             $data = DB::table($tableName)->paginate(20);
             $columns = DB::select("DESCRIBE `$tableName`");
@@ -40,9 +44,10 @@ class GoogleTableController extends Controller
             // $columns = DB::select("SHOW COLUMNS FROM `$tableName`");
         }
 
+        $googleLinks = GoogleLink::all();
         $googleLink = $googleLinks->where('database_table', $tableName)->first();
 
-        return view('google-tables.index', compact('googleLinks','googleLink', 'data', 'columns'));
+        return view('google-tables.index', compact('googleLinks','googleLink', 'search', 'data', 'columns'));
     }
 
     /**
