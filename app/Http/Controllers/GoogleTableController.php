@@ -62,7 +62,7 @@ class GoogleTableController extends Controller
         $googleLinks = GoogleLink::all();
         $googleLink = $googleLinks->where('database_table', $tableName)->first();
 
-        return view('google-tables.index', compact('googleLinks','googleLink', 'search', 'data', 'columns'));
+        return view('google-tables.index', compact('googleLinks','googleLink', 'search', 'data', 'columns', 'tableName'));
     }
 
     /**
@@ -100,34 +100,85 @@ class GoogleTableController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
+     * @param  string  $tableName
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function edit($id)
+    public function edit($tableName, $id)
     {
-        //
+        // Optional: Whitelist allowed tables (security!)
+        /*
+        $allowedTables = ['users', 'posts', 'categories'];
+        if (!in_array($tableName, $allowedTables)) {
+            abort(404);
+        }
+        */
+
+        // Fetch the record
+        $record = DB::table($tableName)->where('id', $id)->first();
+
+        if (!$record) {
+            abort(404);
+        }
+
+        // Get column info (for form fields)
+        $columns = DB::select("DESCRIBE `$tableName`");
+
+        // Pass data to view
+        return view('google-tables.edit', compact('tableName', 'id', 'record', 'columns'));
     }
 
     /**
      * Update the specified resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request
+     * @param  string  $tableName
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, $tableName, $id)
     {
-        //
+        /*
+        $allowedTables = ['users', 'posts', 'categories']; // Update as needed
+        if (!in_array($tableName, $allowedTables)) {
+            abort(404);
+        }
+        */
+
+        // Get column types to validate
+        $columns = DB::select("DESCRIBE `$tableName`");
+        $updatableColumns = collect($columns)
+            ->reject(fn($col) => $col->Key == 'PRI') // Exclude primary key
+            ->pluck('Field')
+            ->toArray();
+
+        // Build validation rules
+        $rules = [];
+        foreach ($updatableColumns as $field) {
+            $rules[$field] = 'nullable|string'; // Adjust if you have numbers, emails, etc.
+        }
+
+        $validated = $request->validate($rules);
+
+        // Update the record
+        DB::table($tableName)->where('id', $id)->update($validated);
+
+        return redirect()
+            ->route('google-tables.index', $tableName)
+            ->with('success', 'Record updated successfully!');
     }
+
 
     /**
      * Remove the specified resource from storage.
      *
+     * @param  string  $tableName
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function destroy($id)
+    public function destroy($tableName, $id)
     {
-        //
+        DB::table($tableName)->where('id', $id)->delete();
+        return redirect()->back()->with('success', 'Record deleted.');
     }
 }

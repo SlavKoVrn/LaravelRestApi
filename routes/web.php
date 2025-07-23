@@ -51,10 +51,15 @@ Route::post('/get-table-data', function (Request $request) {
 });
 
 Route::resource('google-links', GoogleLinkController::class);
-//Route::resource('google-tables', GoogleTableController::class);
-Route::get('/google-tables', [GoogleTableController::class, 'index'])
-    ->name('google-tables');
 
+//Route::resource('google-tables', GoogleTableController::class);
+Route::get('/google-tables', [GoogleTableController::class, 'index'])->name('google-tables');
+Route::put('/google-tables/{tableName}/{id}', [GoogleTableController::class, 'update'])->name('google-tables.update');
+Route::prefix('table')->group(function () {
+    Route::get('/{table}', [GoogleTableController::class, 'index'])->name('google-tables.index');
+    Route::get('/{table}/edit/{id}', [GoogleTableController::class, 'edit'])->name('google-tables.edit');
+    Route::delete('/{table}/{id}', [GoogleTableController::class, 'destroy'])->name('google-tables.destroy');
+});
 
 Route::get('/', function () {
     return view('welcome');

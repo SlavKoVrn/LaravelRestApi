@@ -1,4 +1,3 @@
-<!-- resources/views/google-rows/index.blade.php -->
 @extends('adminlte::page')
 
 @section('content_header')
@@ -80,6 +79,7 @@
                     @foreach($columns as $column)
                         <th>{{ $column->Field }}</th>
                     @endforeach
+                    <th>Actions</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -88,6 +88,25 @@
                         @foreach($columns as $column)
                             <td>{{ $row->{$column->Field} ?? '' }}</td>
                         @endforeach
+                        <td>
+                            {{-- Edit Button --}}
+                            <a href="{{ route('google-tables.edit', [$tableName, $row->id]) }}"
+                               class="btn btn-sm btn-warning text-white">
+                                Edit
+                            </a>
+
+                            {{-- Delete Form --}}
+                            <form action="{{ route('google-tables.destroy', [$tableName, $row->id]) }}"
+                                  method="POST"
+                                  style="display: inline;">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-sm btn-danger"
+                                        onclick="return confirm('Are you sure you want to delete this record?')">
+                                    Delete
+                                </button>
+                            </form>
+                        </td>
                     </tr>
                 @endforeach
                 </tbody>
