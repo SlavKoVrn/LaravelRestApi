@@ -17,14 +17,17 @@ class GoogleTableController extends Controller
      */
     public function index(Request $request)
     {
-        $search = null;
+        $search = '';
         if ($request->query('search')) {
             $request->validate([
                 'search' => 'nullable|string',
             ]);
+            $search = $request->input('search');
             Session::put('search', $request->input('search'));
         }
-        $search = Session::get('search');
+        if ($request->query('page')) {
+            $search = Session::get('search');
+        }
 
         $tableName = null;
         if ($request->query('database_table')) {
