@@ -6,6 +6,7 @@ use App\Models\GoogleLink;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Session;
 
 class GoogleTableController extends Controller
 {
@@ -16,38 +17,30 @@ class GoogleTableController extends Controller
      */
     public function index(Request $request)
     {
-        // Fetch all available "tables" (from GoogleLink or any source)
         $googleLinks = GoogleLink::all();
 
         $googleLink = null;
         $data = null;
         $columns = [];
 
+        $tableName = null;
         if ($request->query('database_table')) {
             $request->validate([
                 'database_table' => 'required|string',
             ]);
-
             $tableName = $request->input('database_table');
-
-            // Check if table exists in the database
-            if (Schema::hasTable($tableName)) {
-                // Get first few rows with pagination
-                $data = DB::table($tableName)->paginate(20);
-
-                // Get column names
-                $tableName = $request->input('database_table');
-
-                $columns = DB::select("DESCRIBE `$tableName`");
-                // or
-                // $columns = DB::select("SHOW COLUMNS FROM `$tableName`");
-            } else {
-                return back()->withErrors("Table '$tableName' does not exist.");
-            }
-
-            // Retain selected link if needed
-            $googleLink = $googleLinks->where('database_table', $tableName)->first();
+            Session::put('table_name', $tableName);
         }
+
+        $tableName = Session::get('table_name');
+        if (Schema::hasTable($tableName)) {
+            $data = DB::table($tableName)->paginate(20);
+            $columns = DB::select("DESCRIBE `$tableName`");
+            // or
+            // $columns = DB::select("SHOW COLUMNS FROM `$tableName`");
+        }
+
+        $googleLink = $googleLinks->where('database_table', $tableName)->first();
 
         return view('google-tables.index', compact('googleLinks','googleLink', 'data', 'columns'));
     }

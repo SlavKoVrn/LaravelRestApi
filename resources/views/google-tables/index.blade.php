@@ -80,7 +80,7 @@
                 @foreach($data as $row)
                     <tr>
                         @foreach($columns as $column)
-                            <td>{{ $row->{$column->Field} ?? '—' }}</td>
+                            <td>{{ $row->{$column->Field} ?? '' }}</td>
                         @endforeach
                     </tr>
                 @endforeach
