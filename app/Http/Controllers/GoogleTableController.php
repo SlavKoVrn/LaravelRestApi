@@ -42,28 +42,24 @@ class GoogleTableController extends Controller
         $columns = [];
         if (Schema::hasTable($tableName)) {
             $columns = DB::select("DESCRIBE `$tableName`");
-            // or
-            // $columns = DB::select("SHOW COLUMNS FROM `$tableName`");
 
-            // Extract and filter searchable columns
-            $searchableTypes = ['char', 'varchar', 'text', 'tinytext', 'mediumtext', 'longtext'];
-            $searchableColumns = collect($columns)
-                ->filter(function ($column) use ($searchableTypes) {
-                    $type = strtolower($column->Type);
-                    return in_array(explode('(', $type)[0], $searchableTypes);
+            $unsearchableTypes = ['blob', 'binary', 'varbinary', 'geometry'];
+            $allColumnNames = collect($columns)
+                ->filter(function ($column) use ($unsearchableTypes) {
+                    $type = strtolower(explode('(', $column->Type)[0]);
+                    return !in_array($type, $unsearchableTypes);
                 })
                 ->pluck('Field');
 
             $query = DB::table($tableName);
-
-            if ($search && $searchableColumns->isNotEmpty()) {
-                $query->where(function ($inner) use ($searchableColumns, $search) {
-                    foreach ($searchableColumns as $column) {
-                        $inner->orWhere($column, 'LIKE', '%' . $search . '%');
+            if ($search && $allColumnNames->isNotEmpty()) {
+                $query->where(function ($inner) use ($allColumnNames, $search) {
+                    foreach ($allColumnNames as $column) {
+                        // Use CAST to convert any type (int, date, etc.) to string
+                        $inner->orWhereRaw('CAST(`' . $column . '` AS CHAR) LIKE ?', ['%' . $search . '%']);
                     }
                 });
             }
-
             $data = $query->paginate(20);
         }
 
