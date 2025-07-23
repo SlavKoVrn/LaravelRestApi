@@ -161,7 +161,11 @@ class GoogleTableController extends Controller
         $validated = $request->validate($rules);
 
         // Update the record
-        DB::table($tableName)->where('id', $id)->update($validated);
+        try {
+            DB::table($tableName)->where('id', $id)->update($validated);
+        }catch (\Exception $e){
+            return redirect()->back()->withErrors(['error' =>$e->getMessage()])->withInput();
+        }
 
         return redirect()
             ->route('google-tables.index', $tableName)
