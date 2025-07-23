@@ -76,9 +76,19 @@ class GoogleLinkController extends Controller
     public function update(Request $request, GoogleLink $googleLink)
     {
         $validator = Validator::make($request->all(), [
-            'database_table' => 'required|string|in:' . implode(',', $this->getDatabaseTables()),
-            'google_link'    => 'required|url|max:255',
-            'google_config'  => 'nullable|file|mimes:json', // optional re-upload
+            'database_table' => [
+                'required',
+                'string',
+                'in:' . implode(',', $this->getDatabaseTables()),
+                'unique:google_links,database_table',
+            ],
+            'google_link' => 'required|url|max:255',
+            'google_config' => 'nullable|file|mimes:json',
+        ], [
+            'database_table.required' => 'The database table is required.',
+            'database_table.in' => 'The selected database table is invalid.',
+            'database_table.unique' => 'This table has already been configured.',
+            'google_link.url' => 'Please enter a valid URL.',
         ]);
 
         if ($validator->fails()) {
