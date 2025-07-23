@@ -1,7 +1,8 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\GoogleRowController;
+use App\Http\Controllers\GoogleLinkController;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -13,6 +14,8 @@ use App\Http\Controllers\GoogleRowController;
 | contains the "web" middleware group. Now create something great!
 |
 */
+
+Route::resource('google-links', GoogleLinkController::class);
 
 Route::get('/', function () {
     return view('welcome');

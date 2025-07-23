@@ -321,8 +321,8 @@ return [
             'can' => 'manage-blog',
         ],
         [
-            'text' => 'Google Sheet rows',
-            'url' => 'google-rows',
+            'text' => 'Google Links',
+            'url' => 'google-links',
             'icon' => 'far fa-fw fa-file',
         ],
         [
