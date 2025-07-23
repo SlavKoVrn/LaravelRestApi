@@ -62,6 +62,29 @@
         @enderror
     </div>
 
+    @if($googleLink->google_config)
+        <div class="mb-3">
+            <label>Current Config (read-only)</label>
+            <div class="d-flex">
+            <textarea id="currentConfig" class="form-control flex-grow-1" rows="10" readonly>
+                {{ $googleLink->google_config }}
+            </textarea>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-secondary mt-2" onclick="copyToClipboard()">
+                Copy to Clipboard
+            </button>
+        </div>
+
+        <script>
+            function copyToClipboard() {
+                const textarea = document.getElementById('currentConfig');
+                textarea.select();
+                document.execCommand('copy');
+                alert('Copied to clipboard!');
+            }
+        </script>
+    @endif
+
     <button type="submit" class="btn btn-success">Update</button>
     <a href="{{ route('google-links.index') }}" class="btn btn-secondary">Cancel</a>
 </form>

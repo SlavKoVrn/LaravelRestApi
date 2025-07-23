@@ -44,13 +44,17 @@ class GoogleLinkController extends Controller
 
         $configJson = '{}';
         if ($request->hasFile('google_config')) {
-            $configJson = file_get_contents($request->file('google_config')->getRealPath());
-        }
+            $file = $request->file('google_config');
 
-        // Optional: Validate JSON
-        json_decode($configJson);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            return redirect()->back()->withErrors(['google_config' => 'Invalid JSON file.'])->withInput();
+            // Validate JSON
+            $jsonContent = file_get_contents($file->getRealPath());
+            json_decode($jsonContent);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                return back()->withErrors(['google_config' => 'Invalid JSON file.'])->withInput();
+            }
+
+            // Store the file and save the path
+            $configJson = $file->store('google-config');
         }
 
         GoogleLink::create([
