@@ -50,8 +50,6 @@ Route::post('/get-table-data', function (Request $request) {
     }
 });
 
-Route::resource('google-links', GoogleLinkController::class);
-
 Route::get('/google-tables', [GoogleTableController::class, 'index'])->name('google-tables');
 Route::put('/google-tables/{tableName}/{id}', [GoogleTableController::class, 'update'])->name('google-tables.update');
 Route::get('/google-tables/create/{tableName}', [GoogleTableController::class, 'create'])->name('google-tables.create');
@@ -62,23 +60,17 @@ Route::prefix('table')->group(function () {
     Route::delete('/{table}/{id}', [GoogleTableController::class, 'destroy'])->name('google-tables.destroy');
 });
 
+Route::resource('google-links', GoogleLinkController::class);
+Route::resource('google-rows', GoogleRowController::class);
+
 Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/google-rows/generate', [GoogleRowController::class, 'generateRows'])
-    ->name('google-rows.generate');
-
-Route::get('/google-rows/remove', [GoogleRowController::class, 'removeRows'])
-    ->name('google-rows.remove');
+Route::get('/google-rows/generate', [GoogleRowController::class, 'generateRows'])->name('google-rows.generate');
+Route::get('/google-rows/remove', [GoogleRowController::class, 'removeRows'])->name('google-rows.remove');
 
 Auth::routes();
 
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
-
-Auth::routes();
-
-Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
-
-Route::resource('google-rows', GoogleRowController::class);
 
