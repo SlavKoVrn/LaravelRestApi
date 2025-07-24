@@ -3,8 +3,10 @@ namespace App\Http\Controllers;
 
 use App\Models\GoogleLink;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class GoogleLinkController extends Controller
 {
@@ -57,11 +59,15 @@ class GoogleLinkController extends Controller
             $configJson = $file->store('google-config');
         }
 
-        GoogleLink::create([
-            'database_table' => $request->database_table,
-            'google_link'    => $request->google_link,
-            'google_config'  => $configJson, // Stored as JSON string
-        ]);
+        try {
+            GoogleLink::create([
+                'database_table' => $request->database_table,
+                'google_link'    => $request->google_link,
+                'google_config'  => $configJson, // Stored as JSON string
+            ]);
+        }catch (\Exception $e){
+            return redirect()->back()->withErrors(['error' =>$e->getMessage()]);
+        }
 
         return redirect()->route('google-links.index')
             ->with('success', 'Google link created successfully.');
@@ -80,7 +86,7 @@ class GoogleLinkController extends Controller
                 'required',
                 'string',
                 'in:' . implode(',', $this->getDatabaseTables()),
-                'unique:google_links,database_table',
+                Rule::unique('google_links', 'database_table')->ignore($googleLink->id),
             ],
             'google_link' => 'required|url|max:255',
             'google_config' => 'nullable|file|mimes:json',
@@ -107,7 +113,11 @@ class GoogleLinkController extends Controller
             $data['google_config'] = $configJson;
         }
 
-        $googleLink->update($data);
+        try {
+            $googleLink->update($data);
+        }catch (\Exception $e){
+            return redirect()->back()->withErrors(['error' =>$e->getMessage()]);
+        }
 
         return redirect()->route('google-links.index')
             ->with('success', 'Google link updated successfully.');
