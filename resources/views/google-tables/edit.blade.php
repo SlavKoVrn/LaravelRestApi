@@ -3,7 +3,7 @@
 @section('content_header')
     @php
         $breadcrumbs = [
-            'Google Tables' => route('google-tables.index'),
+            'Google Tables' => route('google-tables'),
             'Edit Google Table' => ''
         ];
     @endphp
@@ -68,7 +68,7 @@
 
             <div class="mb-3">
                 <button type="submit" class="btn btn-success">Update</button>
-                <a href="{{ route('google-tables.index', $tableName) }}" class="btn btn-secondary">Cancel</a>
+                <a href="{{ route('google-tables') }}" class="btn btn-secondary">Cancel</a>
             </div>
         </form>
     </div>

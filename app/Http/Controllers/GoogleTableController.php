@@ -68,22 +68,79 @@ class GoogleTableController extends Controller
     /**
      * Show the form for creating a new resource.
      *
+     * @param string $tableName
      * @return \Illuminate\Http\Response
      */
-    public function create()
+    public function create($tableName)
     {
-        //
+        // Optional: Whitelist allowed tables (security!)
+        /*
+        $allowedTables = ['users', 'posts', 'categories'];
+        if (!in_array($tableName, $allowedTables)) {
+            abort(404);
+        }
+        */
+
+        if (!Schema::hasTable($tableName)) {
+            abort(404);
+        }
+
+        // Get column info (for form fields)
+        $columns = DB::select("DESCRIBE `$tableName`");
+        // Exclude primary key if it's auto-increment
+        $createColumns = collect($columns)->reject(function ($col) {
+            return $col->Key == 'PRI' && strpos($col->Extra, 'auto_increment') !== false;
+        });
+
+        return view('google-tables.create', compact('tableName', 'createColumns'));
     }
 
     /**
      * Store a newly created resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request
+     * @param  string  $tableName
      * @return \Illuminate\Http\Response
      */
-    public function store(Request $request)
+    public function store(Request $request, $tableName)
     {
-        //
+        /*
+        $allowedTables = ['users', 'posts', 'categories']; // Update as needed
+        if (!in_array($tableName, $allowedTables)) {
+            abort(404);
+        }
+        */
+
+        if (!Schema::hasTable($tableName)) {
+            abort(404);
+        }
+
+        // Get column types to validate
+        $columns = DB::select("DESCRIBE `$tableName`");
+        $insertableColumns = collect($columns)
+            // Exclude auto-increment primary key
+            ->reject(fn($col) => $col->Key == 'PRI' && strpos($col->Extra, 'auto_increment') !== false)
+            ->pluck('Field')
+            ->toArray();
+
+        // Build validation rules
+        $rules = [];
+        foreach ($insertableColumns as $field) {
+            $rules[$field] = 'nullable|string'; // Adjust if you have numbers, emails, etc.
+        }
+
+        $validated = $request->validate($rules);
+
+        // Insert the new record
+        try {
+            DB::table($tableName)->insert($validated);
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['error' => $e->getMessage()])->withInput();
+        }
+
+        return redirect()
+            ->route('google-tables.index', $tableName)
+            ->with('success', 'Record created successfully!');
     }
 
     /**

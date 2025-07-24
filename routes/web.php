@@ -52,9 +52,10 @@ Route::post('/get-table-data', function (Request $request) {
 
 Route::resource('google-links', GoogleLinkController::class);
 
-//Route::resource('google-tables', GoogleTableController::class);
 Route::get('/google-tables', [GoogleTableController::class, 'index'])->name('google-tables');
 Route::put('/google-tables/{tableName}/{id}', [GoogleTableController::class, 'update'])->name('google-tables.update');
+Route::get('/google-tables/create/{tableName}', [GoogleTableController::class, 'create'])->name('google-tables.create');
+Route::post('/google-tables/store/{tableName}', [GoogleTableController::class, 'store'])->name('google-tables.store');
 Route::prefix('table')->group(function () {
     Route::get('/{table}', [GoogleTableController::class, 'index'])->name('google-tables.index');
     Route::get('/{table}/edit/{id}', [GoogleTableController::class, 'edit'])->name('google-tables.edit');
