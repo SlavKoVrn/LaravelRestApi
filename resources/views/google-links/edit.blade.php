@@ -3,7 +3,8 @@
 @section('content_header')
     @php
         $breadcrumbs = [
-            'Google Links' => url('/'),
+            'Google Links' => route('google-links.index'),
+            'Edit Google Link' => ''
         ];
     @endphp
 

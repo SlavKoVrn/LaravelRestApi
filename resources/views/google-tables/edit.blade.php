@@ -1,5 +1,18 @@
 @extends('adminlte::page')
 
+@section('content_header')
+    @php
+        $breadcrumbs = [
+            'Google Tables' => route('google-tables.index'),
+            'Edit Google Table' => ''
+        ];
+    @endphp
+
+    <nav aria-label="breadcrumb">
+        @include('partials.breadcrumbs')
+    </nav>
+@endsection
+
 @section('content')
     @if ($errors->any())
         <div class="alert alert-danger">
