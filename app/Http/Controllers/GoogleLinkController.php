@@ -125,7 +125,11 @@ class GoogleLinkController extends Controller
 
     public function destroy(GoogleLink $googleLink)
     {
-        $googleLink->delete();
+        try {
+            $googleLink->delete();
+        }catch (\Exception $e){
+            return redirect()->back()->withErrors(['error' =>$e->getMessage()]);
+        }
         return redirect()->route('google-links.index')
             ->with('success', 'Google link deleted.');
     }
