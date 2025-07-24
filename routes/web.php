@@ -50,6 +50,16 @@ Route::post('/get-table-data', function (Request $request) {
     }
 });
 
+Route::get('/', function () {
+    return view('welcome');
+});
+
+Route::get('/google-rows/generate', [GoogleRowController::class, 'generateRows'])->name('google-rows.generate');
+Route::get('/google-rows/remove', [GoogleRowController::class, 'removeRows'])->name('google-rows.remove');
+Route::resource('google-links', GoogleLinkController::class);
+Route::resource('google-rows', GoogleRowController::class);
+
+
 Route::get('/google-tables', [GoogleTableController::class, 'index'])->name('google-tables');
 Route::put('/google-tables/{tableName}/{id}', [GoogleTableController::class, 'update'])->name('google-tables.update');
 Route::get('/google-tables/create/{tableName}', [GoogleTableController::class, 'create'])->name('google-tables.create');
@@ -58,17 +68,9 @@ Route::prefix('table')->group(function () {
     Route::get('/{table}', [GoogleTableController::class, 'index'])->name('google-tables.index');
     Route::get('/{table}/edit/{id}', [GoogleTableController::class, 'edit'])->name('google-tables.edit');
     Route::delete('/{table}/{id}', [GoogleTableController::class, 'destroy'])->name('google-tables.destroy');
+    Route::get('/{table}/truncate', [GoogleTableController::class, 'removeRows'])->name('google-tables.truncate');
+    Route::get('/{table}/generate', [GoogleTableController::class, 'generateRows'])->name('google-tables.generate');
 });
-
-Route::resource('google-links', GoogleLinkController::class);
-Route::resource('google-rows', GoogleRowController::class);
-
-Route::get('/', function () {
-    return view('welcome');
-});
-
-Route::get('/google-rows/generate', [GoogleRowController::class, 'generateRows'])->name('google-rows.generate');
-Route::get('/google-rows/remove', [GoogleRowController::class, 'removeRows'])->name('google-rows.remove');
 
 Auth::routes();
 

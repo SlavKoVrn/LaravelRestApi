@@ -336,6 +336,11 @@ return [
             'icon' => 'far fa-fw fa-file',
         ],
         [
+            'text' => 'Google Rows',
+            'url' => 'google-rows',
+            'icon' => 'far fa-fw fa-file',
+        ],
+        [
             'text' => 'pages',
             'url' => '/',
             'icon' => 'far fa-fw fa-file',

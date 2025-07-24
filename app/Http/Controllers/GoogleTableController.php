@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\GoogleLink;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Str;
 
 class GoogleTableController extends Controller
 {
@@ -229,7 +231,6 @@ class GoogleTableController extends Controller
             ->with('success', 'Record updated successfully!');
     }
 
-
     /**
      * Remove the specified resource from storage.
      *
@@ -246,4 +247,123 @@ class GoogleTableController extends Controller
         }
         return redirect()->back()->with('success', 'Record deleted.');
     }
+
+    /**
+     * Generate records for table
+     *
+     * @param  string  $tableName
+     * @return \Illuminate\Http\Response
+     */
+    public function generateRows($tableName)
+    {
+        $count = 1000;
+        $batchSize = 500;
+
+        // Get the list of columns and filter out the primary key
+        $columns = DB::select("DESCRIBE `$tableName`");
+        $updatableColumns = collect($columns)
+            ->reject(fn($col) => $col->Key == 'PRI') // Exclude primary key
+            ->toArray();
+
+        if (empty($updatableColumns)) {
+            return redirect()
+                ->route('google-tables')
+                ->with('error', "No updatable columns found in table '{$tableName}'.");
+        }
+
+        try {
+            DB::transaction(function () use ($count, $batchSize, $tableName, $updatableColumns) {
+                $data = [];
+
+                for ($i = 1; $i <= $count; $i++) {
+                    $row = [];
+                    foreach ($updatableColumns as $column) {
+                        $row[$column->Field] = $this->generateDummyValue($column);
+                    }
+                    $data[] = $row;
+
+                    // Insert in batches
+                    if ($i % $batchSize === 0 || $i === $count) {
+                        DB::table($tableName)->insert($data);
+                        $data = []; // Reset batch
+                    }
+                }
+            });
+        }catch (\Exception $e){
+            return redirect()->back()->withErrors(['error' =>$e->getMessage()]);
+        }
+
+        return redirect()
+            ->route('google-tables')
+            ->with('success', "Successfully generated {$count} {$tableName} rows!");
+    }
+
+    private function generateDummyValue($column)
+    {
+        $type = strtolower($column->Type);
+        $field = strtolower($column->Field);
+
+        if (str_starts_with($type, 'enum')) {
+            // Match values inside ENUM: 'val1','val2','val3'
+            if (preg_match_all("/'([^']+)'/", $column->Type, $matches)) {
+                $enumValues = $matches[1]; // These are the actual enum options
+                return $enumValues[array_rand($enumValues)]; // Pick random
+            }
+            return 'Unknown'; // Fallback if parsing fails
+        }
+
+        if (str_contains($type, 'varchar') || str_starts_with($type, 'char')) {
+            $length = 255; // default
+            if (preg_match('/\((\d+)\)/', $type, $matches)) {
+                $length = (int)$matches[1];
+            }
+            return Str::random(min($length, 20)); // reasonable size
+        }
+
+        if (str_contains($type, 'text')) {
+            return 'Lorem ipsum dolor sit amet...'; // or use Faker
+        }
+
+        if (str_contains($type, 'int') || str_contains($type, 'tinyint') || str_contains($type, 'bigint')) {
+            return rand(1, 1000);
+        }
+
+        if (str_contains($type, 'decimal') || str_contains($type, 'double') || str_contains($type, 'float')) {
+            return round(rand(100, 999) / 10, 2);
+        }
+
+        if (str_contains($type, 'timestamp') || str_contains($type, 'datetime') || str_contains($field, 'created_at') || str_contains($field, 'updated_at')) {
+            return now()->subDays(rand(0, 365))->format('Y-m-d H:i:s');
+        }
+
+        if (str_contains($type, 'date')) {
+            return now()->subDays(rand(0, 365))->format('Y-m-d');
+        }
+
+        if (str_contains($type, 'tinyint(1)') || str_contains($field, 'is_')) {
+            return rand(0, 1); // boolean
+        }
+
+        // Fallback
+        return 'Generated value';
+    }
+
+    /**
+     * Truncate table
+     *
+     * @param  string  $tableName
+     * @return \Illuminate\Http\Response
+     */
+    public function removeRows($tableName)
+    {
+        try {
+            DB::table($tableName)->truncate();
+        }catch (\Exception $e){
+            return redirect()->back()->withErrors(['error' =>$e->getMessage()]);
+        }
+        return redirect()
+            ->route('google-tables')
+            ->with('success', "Rows truncated!");
+    }
+
 }

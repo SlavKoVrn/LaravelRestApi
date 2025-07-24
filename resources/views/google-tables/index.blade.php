@@ -26,9 +26,9 @@
 
     <a href="{{ route('google-tables.create', ['tableName' => $tableName]) }}" class="btn btn-success mb-3">Add New Row</a>
 
-    <a href="{{ route('google-tables') }}" class="btn btn-primary mb-3">Generate 1000 Rows</a>
+    <a href="{{ route('google-tables.generate', $tableName) }}" class="btn btn-primary mb-3">Generate 1000 Rows</a>
 
-    <a href="{{ route('google-tables') }}" class="btn btn-danger mb-3">Remove All Rows</a>
+    <a href="{{ route('google-tables.truncate', $tableName) }}" class="btn btn-danger mb-3">Remove All Rows</a>
 
     @if(session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
