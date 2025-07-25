@@ -2,23 +2,27 @@
 namespace App\Services;
 
 use Google\Client;
+use GuzzleHttp\Client as GuzzleClient;
 use Google\Service\Sheets;
-use Illuminate\Support\Facades\Log;
 
 class GoogleSheetsService
 {
     protected Sheets $service;
     protected string $spreadsheetId;
 
-    public function __construct()
+    public function __construct($credentials, $spreadsheetId)
     {
         $client = new Client();
         $client->setApplicationName(config('google.application_name'));
         $client->setScopes(config('google.scopes'));
-        $client->setAuthConfig(config('google.credentials_file'));
+        $client->setAuthConfig($credentials);
+        $guzzleClient = new GuzzleClient([
+            'verify' => base_path('cacert.pem'),
+        ]);
+        $client->setHttpClient($guzzleClient);
 
         $this->service = new Sheets($client);
-        $this->spreadsheetId = env('GOOGLE_SHEETS_SPREADSHEET_ID');
+        $this->spreadsheetId = $spreadsheetId;
     }
 
     /**
@@ -26,60 +30,41 @@ class GoogleSheetsService
      */
     public function readSheet(string $range): array
     {
-        try {
-            $response = $this->service->spreadsheets_values->get($this->spreadsheetId, $range);
-            return $response->getValues() ?: [];
-        } catch (\Exception $e) {
-            Log::error('Google Sheets Read Error: ' . $e->getMessage());
-            throw $e;
-        }
+        $response = $this->service->spreadsheets_values->get($this->spreadsheetId, $range);
+        return $response->getValues() ?: [];
     }
 
     /**
      * Write data to a sheet (overwrite)
      */
-    public function writeSheet(string $range, array $rows): bool
+    public function writeSheet(string $range, array $rows)
     {
-        try {
-            $body = new \Google\Service\Sheets\ValueRange([
-                'values' => $rows
-            ]);
+        $body = new \Google\Service\Sheets\ValueRange([
+            'values' => $rows
+        ]);
 
-            $this->service->spreadsheets_values->update(
-                $this->spreadsheetId,
-                $range,
-                $body,
-                ['valueInputOption' => 'RAW']
-            );
-
-            return true;
-        } catch (\Exception $e) {
-            Log::error('Google Sheets Write Error: ' . $e->getMessage());
-            throw $e;
-        }
+        $this->service->spreadsheets_values->update(
+            $this->spreadsheetId,
+            $range,
+            $body,
+            ['valueInputOption' => 'RAW']
+        );
     }
 
     /**
      * Append data to a sheet
      */
-    public function appendSheet(string $range, array $row): bool
+    public function appendSheet(string $range, array $row)
     {
-        try {
-            $body = new \Google\Service\Sheets\ValueRange([
-                'values' => [$row]
-            ]);
+        $body = new \Google\Service\Sheets\ValueRange([
+            'values' => [$row]
+        ]);
 
-            $this->service->spreadsheets_values->append(
-                $this->spreadsheetId,
-                $range,
-                $body,
-                ['valueInputOption' => 'RAW']
-            );
-
-            return true;
-        } catch (\Exception $e) {
-            Log::error('Google Sheets Append Error: ' . $e->getMessage());
-            throw $e;
-        }
+        $this->service->spreadsheets_values->append(
+            $this->spreadsheetId,
+            $range,
+            $body,
+            ['valueInputOption' => 'RAW']
+        );
     }
 }

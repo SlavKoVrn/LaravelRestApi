@@ -3,12 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\GoogleLink;
+use App\Services\GoogleSheetsService;
+
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
-use Illuminate\Support\Str;
 
 class GoogleTableController extends Controller
 {
@@ -465,9 +465,48 @@ class GoogleTableController extends Controller
      */
     public function exportRows($tableName)
     {
-        return redirect()
-            ->route('google-tables')
-            ->with('success', "Rows exported!");
+        try {
+            // Get all records from the table
+            $rows = DB::table($tableName)->get()->toArray();
+
+            if (empty($rows)) {
+                return redirect()->route('google-tables')->with('warning', 'No data to export.');
+            }
+
+            // Get column names from the table schema
+            $columns = Schema::getColumnListing($tableName);
+            $data = [$columns]; // First row is header
+
+            // Convert each row object to array and map values in correct column order
+            foreach ($rows as $row) {
+                $dataRow = [];
+                foreach ($columns as $column) {
+                    $dataRow[] = $row->$column ?? '';
+                }
+                $data[] = $dataRow;
+            }
+
+            // Use Google Sheets Service to write data
+            $googleLink = GoogleLink::all()->where('database_table', $tableName)->first();
+            $credentials = json_decode($googleLink->google_config, true);
+            $spreadsheetId = '';
+            if (preg_match('#/spreadsheets/d/([a-zA-Z0-9-_]+)#', $googleLink->google_link, $matches)) {
+                $spreadsheetId = $matches[1];
+            }
+            $googleSheetsService = new GoogleSheetsService($credentials, $spreadsheetId);
+
+            // Define sheet range (e.g., 'Sheet1!A1')
+            $sheetName = 'Лист1'; // Change if needed
+            $range = "{$sheetName}!A1";
+
+            $googleSheetsService->writeSheet($range, $data);
+
+            return redirect()->route('google-tables')
+                ->with('success', "Data from '{$tableName}' exported to Google Sheets successfully!");
+
+        } catch (\Exception $e) {
+            return redirect()->route('google-tables')->with('error', 'Failed to export data: ' . $e->getMessage());
+        }
     }
 
     /**
