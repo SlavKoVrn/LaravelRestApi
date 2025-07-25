@@ -70,6 +70,8 @@ Route::prefix('table')->group(function () {
     Route::delete('/{table}/{id}', [GoogleTableController::class, 'destroy'])->name('google-tables.destroy');
     Route::get('/{table}/truncate', [GoogleTableController::class, 'removeRows'])->name('google-tables.truncate');
     Route::get('/{table}/generate', [GoogleTableController::class, 'generateRows'])->name('google-tables.generate');
+    Route::get('/{table}/export', [GoogleTableController::class, 'exportRows'])->name('google-tables.export');
+    Route::get('/{table}/import', [GoogleTableController::class, 'importRows'])->name('google-tables.import');
 });
 
 Auth::routes();

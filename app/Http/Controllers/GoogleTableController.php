@@ -457,4 +457,30 @@ class GoogleTableController extends Controller
             ->with('success', "Rows truncated!");
     }
 
+    /**
+     * Export table to Google Sheet
+     *
+     * @param  string  $tableName
+     * @return \Illuminate\Http\Response
+     */
+    public function exportRows($tableName)
+    {
+        return redirect()
+            ->route('google-tables')
+            ->with('success', "Rows exported!");
+    }
+
+    /**
+     * Import table to Google Sheet
+     *
+     * @param  string  $tableName
+     * @return \Illuminate\Http\Response
+     */
+    public function importRows($tableName)
+    {
+        return redirect()
+            ->route('google-tables')
+            ->with('success', "Rows imported!");
+    }
+
 }
