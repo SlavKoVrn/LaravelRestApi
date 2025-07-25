@@ -536,7 +536,7 @@ class GoogleTableController extends Controller
 
             // Define sheet range (adjust as needed)
             $sheetName = 'Лист1'; // Change if your sheet has a different name
-            $range = "{$sheetName}!A1:Z1001"; // Adjust range size as needed
+            $range = $googleSheets->getUsedRange($sheetName);
 
             $values = $googleSheets->readSheet($range);
 

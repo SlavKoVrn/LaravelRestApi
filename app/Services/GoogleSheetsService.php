@@ -67,4 +67,40 @@ class GoogleSheetsService
             ['valueInputOption' => 'RAW']
         );
     }
+
+    public function getUsedRange(string $sheetName)
+    {
+            $response = $this->service->spreadsheets->get($this->spreadsheetId, [
+                'ranges' => $sheetName,
+                'includeGridData' => false
+            ]);
+
+            $sheet = collect($response->getSheets())->first(function ($sheet) use ($sheetName) {
+                return $sheet->getProperties()->getTitle() === $sheetName;
+            });
+
+            if (!$sheet) {
+                throw new \Exception("Sheet '$sheetName' not found.");
+            }
+
+            $gridProps = $sheet->getProperties()->getGridProperties();
+            $rowCount = $gridProps->getRowCount();
+            $colCount = $gridProps->getColumnCount();
+
+            // But better: Use the actual data bounds
+            // Alternatively, use valueRanges to detect non-empty bounds
+            return "{$sheetName}!A1:" . self::columnIndexToLetter($colCount) . $rowCount;
+    }
+
+    public static function columnIndexToLetter($columnIndex)
+    {
+        $letter = '';
+        while ($columnIndex > 0) {
+            $columnIndex--;
+            $letter = chr(65 + ($columnIndex % 26)) . $letter;
+            $columnIndex = (int)($columnIndex / 26);
+        }
+        return $letter;
+    }
+
 }
