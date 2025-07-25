@@ -470,7 +470,7 @@ class GoogleTableController extends Controller
             $rows = DB::table($tableName)->get()->toArray();
 
             if (empty($rows)) {
-                return redirect()->route('google-tables')->with('warning', 'No data to export.');
+                return redirect()->route('google-tables')->with('error', 'No data to export.');
             }
 
             // Get column names from the table schema
@@ -492,6 +492,9 @@ class GoogleTableController extends Controller
             $spreadsheetId = '';
             if (preg_match('#/spreadsheets/d/([a-zA-Z0-9-_]+)#', $googleLink->google_link, $matches)) {
                 $spreadsheetId = $matches[1];
+            }
+            if (empty($spreadsheetId)){
+                return redirect()->route('google-tables')->with('error', 'Spread Sheet Id NOT DEFINED ');
             }
             $googleSheetsService = new GoogleSheetsService($credentials, $spreadsheetId);
 
