@@ -36,6 +36,10 @@ class GoogleTableController extends Controller
         }
         $tableName = Session::get('table_name');
 
+        if (!$tableName){
+            $tableName = 'migrations';
+        }
+
         $data = null;
         $columns = [];
         if (Schema::hasTable($tableName)) {
@@ -301,51 +305,138 @@ class GoogleTableController extends Controller
     private function generateDummyValue($column)
     {
         $type = strtolower($column->Type);
-        $field = strtolower($column->Field);
+        $key = strtolower($column->Key);
 
+        // === Check for UNIQUE KEY ===
+        $isUnique = ($key === 'uni');
+
+        // Helper: Generate random string
+        $randomString = function ($length = 10) {
+            return substr(str_shuffle('abcdefghijklmnopqrstuvwxyz'), 0, $length);
+        };
+
+        // Helper: Generate random number string
+        $randomNumber = function ($digits = 6) {
+            return rand(1, 9) . str_pad(rand(0, 10 ** ($digits - 1) - 1), $digits - 1, '0', STR_PAD_LEFT);
+        };
+
+        // === ENUM('value1','value2',...) ===
         if (str_starts_with($type, 'enum')) {
-            // Match values inside ENUM: 'val1','val2','val3'
-            if (preg_match_all("/'([^']+)'/", $column->Type, $matches)) {
-                $enumValues = $matches[1]; // These are the actual enum options
-                return $enumValues[array_rand($enumValues)]; // Pick random
+            if (preg_match_all("/'([^']+)'/", $type, $matches)) {
+                $enumValues = $matches[1];
+                if (!empty($enumValues)) {
+                    // If unique, try to randomize choice; else pick first or random
+                    return $isUnique ? $enumValues[array_rand($enumValues)] : ($enumValues[0] ?? '');
+                }
             }
-            return 'Unknown'; // Fallback if parsing fails
+            return '';
         }
 
-        if (str_contains($type, 'varchar') || str_starts_with($type, 'char')) {
-            $length = 255; // default
-            if (preg_match('/\((\d+)\)/', $type, $matches)) {
-                $length = (int)$matches[1];
+        // === SET(...) ===
+        if (str_starts_with($type, 'set')) {
+            return ''; // SET not supported in dummy data (multiple values)
+        }
+
+        // === INTEGER TYPES ===
+        if (preg_match('/^(tinyint|smallint|mediumint|int|integer|bigint)/', $type)) {
+            return $isUnique ? time() + rand(1, 100000) : 0;
+        }
+
+        // === BOOLEAN / TINYINT(1) ===
+        if (preg_match('/^tinyint\s*\(\s*1\s*\)/', $type)) {
+            return !$isUnique ? 0 : rand(0, 1); // Still binary, but random if unique
+        }
+
+        // === DECIMAL / NUMERIC ===
+        if (preg_match('/^(decimal|numeric)/', $type)) {
+            return $isUnique ? round(rand(1, 100000) / 100, 2) : 0.0;
+        }
+
+        // === FLOAT / DOUBLE ===
+        if (str_contains($type, 'float') || str_contains($type, 'double')) {
+            return $isUnique ? round(rand(1, 100000) / 100, 6) : 0.0;
+        }
+
+        // === CHAR(M) ===
+        if (str_starts_with($type, 'char')) {
+            if (preg_match('/char\s*\(\s*(\d+)\s*\)/', $type, $matches)) {
+                $len = (int)$matches[1];
+                return $isUnique ? str_pad($randomString($len), $len, '*', STR_PAD_RIGHT) : '';
             }
-            return Str::random(min($length, 20)); // reasonable size
+            return '';
         }
 
-        if (str_contains($type, 'text')) {
-            return 'Lorem ipsum dolor sit amet...'; // or use Faker
+        // === VARCHAR(M) ===
+        if (str_starts_with($type, 'varchar')) {
+            if (preg_match('/varchar\s*\(\s*(\d+)\s*\)/', $type, $matches)) {
+                $len = (int)$matches[1];
+                if ($isUnique) {
+                    $prefix = 'uniq_';
+                    $availableLen = max(5, $len - strlen($prefix));
+                    return $prefix . $randomString($availableLen);
+                }
+                return '';
+            }
+            return '';
         }
 
-        if (str_contains($type, 'int') || str_contains($type, 'tinyint') || str_contains($type, 'bigint')) {
-            return rand(1, 1000);
+        // === TEXT TYPES ===
+        if (preg_match('/^(tinytext|text|mediumtext|longtext)$/', $type)) {
+            return $isUnique ? 'unique_text_' . uniqid() : '';
         }
 
-        if (str_contains($type, 'decimal') || str_contains($type, 'double') || str_contains($type, 'float')) {
-            return round(rand(100, 999) / 10, 2);
+        // === BINARY / VARBINARY ===
+        if (str_starts_with($type, 'binary') || str_starts_with($type, 'varbinary')) {
+            return null; // Cannot meaningfully dummy binary; leave null
         }
 
-        if (str_contains($type, 'timestamp') || str_contains($type, 'datetime') || str_contains($field, 'created_at') || str_contains($field, 'updated_at')) {
-            return now()->subDays(rand(0, 365))->format('Y-m-d H:i:s');
+        // === BLOB TYPES ===
+        if (preg_match('/^(tinyblob|blob|mediumblob|longblob)$/', $type)) {
+            return null;
         }
 
-        if (str_contains($type, 'date')) {
-            return now()->subDays(rand(0, 365))->format('Y-m-d');
+        // === DATETIME ===
+        if (str_starts_with($type, 'datetime')) {
+            return $isUnique ? now()->addSeconds(rand(1, 3600))->format('Y-m-d H:i:s') : now()->format('Y-m-d H:i:s');
         }
 
-        if (str_contains($type, 'tinyint(1)') || str_contains($field, 'is_')) {
-            return rand(0, 1); // boolean
+        // === DATE ===
+        if (str_starts_with($type, 'date')) {
+            return $isUnique ? now()->addDays(rand(1, 30))->format('Y-m-d') : now()->format('Y-m-d');
         }
 
-        // Fallback
-        return 'Generated value';
+        // === TIMESTAMP ===
+        if (str_starts_with($type, 'timestamp')) {
+            return $isUnique ? now()->addSeconds(rand(1, 3600))->format('Y-m-d H:i:s') : now()->format('Y-m-d H:i:s');
+        }
+
+        // === TIME ===
+        if (str_starts_with($type, 'time')) {
+            return $isUnique ? now()->addHours(rand(1, 24))->format('H:i:s') : now()->format('H:i:s');
+        }
+
+        // === YEAR ===
+        if (str_starts_with($type, 'year')) {
+            return $isUnique ? (string)(date('Y') + rand(1, 10)) : date('Y');
+        }
+
+        // === JSON ===
+        if (str_contains($type, 'json')) {
+            return $isUnique ? '{"dummy":"unique_' . uniqid() . '"}' : '{}';
+        }
+
+        // === SPATIAL TYPES ===
+        if (preg_match('/^(geometry|point|linestring|polygon|multipoint|multipolygon|geometrycollection)$/', $type)) {
+            return null;
+        }
+
+        // === BIT FIELD ===
+        if (str_starts_with($type, 'bit')) {
+            return $isUnique ? 1 : 0; // Often used like boolean flags
+        }
+
+        // === FALLBACK ===
+        return $isUnique ? 'unique_' . uniqid() : '';
     }
 
     /**
