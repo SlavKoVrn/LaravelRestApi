@@ -37,7 +37,7 @@
 
     <a href="{{ route('google-tables.export', $tableName) }}" class="btn btn-warning mb-3">Export Google Sheet</a>
 
-    <a href="{{ route('google-tables.import', $tableName) }}" class="btn btn-secondary mb-3">Import Google Sheet</a>
+    <a href="{{ route('google-tables.import', $tableName) }}" class="btn btn-info mb-3">Import Google Sheet</a>
 
     <!-- Form to select table -->
     <form method="GET" action="{{ route('google-tables') }}" class="mb-4">

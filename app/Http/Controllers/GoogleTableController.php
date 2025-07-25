@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Str;
 
 class GoogleTableController extends Controller
 {
@@ -520,9 +521,81 @@ class GoogleTableController extends Controller
      */
     public function importRows($tableName)
     {
-        return redirect()
-            ->route('google-tables')
-            ->with('success', "Rows imported!");
+        try {
+            // Initialize Google Sheets Service
+            $googleLink = GoogleLink::all()->where('database_table', $tableName)->first();
+            $credentials = json_decode($googleLink->google_config, true);
+            $spreadsheetId = '';
+            if (preg_match('#/spreadsheets/d/([a-zA-Z0-9-_]+)#', $googleLink->google_link, $matches)) {
+                $spreadsheetId = $matches[1];
+            }
+            if (empty($spreadsheetId)){
+                return redirect()->route('google-tables')->with('error', 'Spread Sheet Id NOT DEFINED ');
+            }
+            $googleSheets = new GoogleSheetsService($credentials, $spreadsheetId);
+
+            // Define sheet range (adjust as needed)
+            $sheetName = 'Лист1'; // Change if your sheet has a different name
+            $range = "{$sheetName}!A1:Z1000"; // Adjust range size as needed
+
+            $values = $googleSheets->readSheet($range);
+
+            if (empty($values)) {
+                return redirect()->route('google-tables')
+                    ->with('error', 'No data found in the sheet.');
+            }
+
+            // First row = headers
+            $headers = $values[0];
+            $headers = array_map('trim', $headers);
+            $headers = array_map([Str::class, 'snake'], $headers); // Normalize to snake_case
+
+            // Get actual DB columns
+            $dbColumns = Schema::getColumnListing($tableName);
+            $validColumns = array_intersect($dbColumns, $headers);
+
+            if (empty($validColumns)) {
+                return redirect()->route('google-tables')
+                    ->with('error', 'No matching columns found between sheet and table.');
+            }
+
+            $importedCount = 0;
+            $rowsToInsert = [];
+
+            // Loop through data rows (skip header)
+            foreach (array_slice($values, 1) as $row) {
+                $rowData = [];
+
+                // Map each header to its value
+                foreach ($headers as $index => $header) {
+                    if (in_array($header, $dbColumns)) {
+                        $value = $index < count($row) ? trim($row[$index]) : null;
+                        $rowData[$header] = $value === '' ? null : $value;
+                    }
+                }
+
+                if (count($rowData) > 0) {
+                    $rowsToInsert[] = $rowData;
+                    $importedCount++;
+                }
+            }
+
+            if ($importedCount > 0) {
+                // Insert in chunks to avoid memory issues
+                collect($rowsToInsert)->chunk(100)->each(function ($chunk) use ($tableName) {
+                    DB::table($tableName)->insertOrIgnore($chunk->toArray());
+                });
+
+                return redirect()->route('google-tables')
+                    ->with('success', "$importedCount row(s) imported into '$tableName' from Google Sheets.");
+            }
+
+            return redirect()->route('google-tables')->with('success', 'No rows to import.');
+
+        } catch (\Exception $e) {
+            return redirect()->route('google-tables')
+                ->with('error', 'Import failed: ' . $e->getMessage());
+        }
     }
 
 }
