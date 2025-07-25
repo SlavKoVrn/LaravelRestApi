@@ -62,25 +62,37 @@
             </div>
 
             <!-- Button -->
-            <div class="col-md-4">
-                <label>&nbsp;</label>
-                <button type="submit" class="btn btn-primary btn-block">Show</button>
+            <div class="col-md-2">
+                <label>show records</label>
+                <button type="submit" class="btn btn-success btn-block">Show</button>
             </div>
+
+            @php
+                $link = optional($googleLink)->google_link;
+            @endphp
+
+            @if($link)
+                <div class="col-md-2">
+                    <label>show google sheet</label>
+                    <a href="{{ $link }}" target="_blank" class="btn btn-primary mb-3">Google Sheet</a>
+                </div>
+            @endif
+
         </div>
     </form>
 
     <!-- Display Table Data if Available -->
     @if(isset($data) && $data->isNotEmpty())
 
-        <div class="row row-md-12">
-            <strong><x-pagination-summary :paginator="$data" /></strong>
-        </div>
-
         @if($data->count() > 0)
             <div class="d-flex justify-content-center">
                 {{ $data->links('pagination::bootstrap-4') }}
             </div>
         @endif
+
+        <div class="row row-md-12">
+            <strong><x-pagination-summary :paginator="$data" /></strong>
+        </div>
 
         <div class="table-responsive">
             <table class="table table-bordered table-striped">

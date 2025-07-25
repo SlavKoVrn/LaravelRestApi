@@ -37,7 +37,7 @@ class GoogleTableController extends Controller
         $tableName = Session::get('table_name');
 
         if (!$tableName){
-            $tableName = 'migrations';
+            $tableName = 'google_links';
         }
 
         $data = null;
