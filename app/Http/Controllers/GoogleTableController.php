@@ -500,7 +500,7 @@ class GoogleTableController extends Controller
             $googleSheetsService = new GoogleSheetsService($credentials, $spreadsheetId);
 
             // Define sheet range (e.g., 'Sheet1!A1')
-            $sheetName = 'Лист1'; // Change if needed
+            $sheetName = $googleLink->spreadsheet_list;
             $range = "{$sheetName}!A1";
 
             $googleSheetsService->writeSheet($range, $data);
@@ -535,7 +535,7 @@ class GoogleTableController extends Controller
             $googleSheets = new GoogleSheetsService($credentials, $spreadsheetId);
 
             // Define sheet range (adjust as needed)
-            $sheetName = 'Лист1'; // Change if your sheet has a different name
+            $sheetName = $googleLink->spreadsheet_list;
             $range = $googleSheets->getUsedRange($sheetName);
 
             $values = $googleSheets->readSheet($range);

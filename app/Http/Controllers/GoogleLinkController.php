@@ -32,6 +32,7 @@ class GoogleLinkController extends Controller
                 'unique:google_links,database_table',
             ],
             'google_link' => 'required|url|max:255',
+            'spreadsheet_list' => 'required|max:255',
             'google_config' => 'nullable|file|mimes:json',
         ], [
             'database_table.required' => 'The database table is required.',
@@ -89,6 +90,7 @@ class GoogleLinkController extends Controller
                 Rule::unique('google_links', 'database_table')->ignore($googleLink->id),
             ],
             'google_link' => 'required|url|max:255',
+            'spreadsheet_list' => 'required|max:255',
             'google_config' => 'nullable|file|mimes:json',
         ], [
             'database_table.required' => 'The database table is required.',

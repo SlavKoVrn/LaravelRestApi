@@ -13,6 +13,7 @@ class GoogleLink extends Model
         'database_table',
         'google_link',
         'google_config',
+        'spreadsheet_list',
     ];
 
     // Cast google_config as array (since it's JSON)

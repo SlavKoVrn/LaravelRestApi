@@ -48,7 +48,16 @@
         <input type="url" name="google_link" class="form-control @error('google_link') is-invalid @enderror"
                value="{{ old('google_link') }}" required>
         @error('google_link')
-            <div class="invalid-feedback">{{ $message }}</div>
+        <div class="invalid-feedback">{{ $message }}</div>
+        @enderror
+    </div>
+
+    <div class="mb-3">
+        <label>SpreadSheet List</label>
+        <input type="text" name="spreadsheet_list" class="form-control @error('spreadsheet_list') is-invalid @enderror"
+               value="{{ old('spreadsheet_list') }}" required>
+        @error('spreadsheet_list')
+        <div class="invalid-feedback">{{ $message }}</div>
         @enderror
     </div>
 

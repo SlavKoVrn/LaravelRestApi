@@ -25,6 +25,7 @@
         <tr>
             <th>Database Table</th>
             <th>Google Link</th>
+            <th>SpreadSheet List</th>
             <th>Google Config</th>
             <th>Actions</th>
         </tr>
@@ -34,6 +35,7 @@
             <tr>
                 <td>{{ $link->database_table }}</td>
                 <td><a href="{{ $link->google_link }}" target="_blank">Open</a></td>
+                <td>{{ $link->spreadsheet_list }}</td>
                 <td>{{ substr($link->google_config, 0, 50) }}</td>
                 <td>
                     <a href="{{ route('google-links.edit', $link) }}" class="btn btn-sm btn-warning">Edit</a>
