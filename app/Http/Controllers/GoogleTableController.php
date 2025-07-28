@@ -599,7 +599,7 @@ class GoogleTableController extends Controller
     }
 
     /**
-     * Initialize export: return total row count
+     * Initialize export: write header row and return total row count
      */
     public function exportInitAjax($tableName)
     {
@@ -609,11 +609,57 @@ class GoogleTableController extends Controller
             ], 404);
         }
 
-        $total = DB::table($tableName)->count();
+        // Get column names
+        $columns = Schema::getColumnListing($tableName);
+        $headerRow = [$columns]; // Wrap in array for sheet writing
 
-        return response()->json([
-            'total' => $total
-        ]);
+        try {
+            // Fetch Google Sheet config
+            $googleLink = GoogleLink::where('database_table', $tableName)->first();
+            if (!$googleLink) {
+                return response()->json([
+                    'error' => 'Google Sheet configuration not found for this table.'
+                ], 500);
+            }
+
+            $credentials = json_decode($googleLink->google_config, true);
+            $spreadsheetLink = $googleLink->google_link;
+
+            // Extract spreadsheet ID from URL
+            $spreadsheetId = '';
+            if (preg_match('#/spreadsheets/d/([a-zA-Z0-9-_]+)#', $spreadsheetLink, $matches)) {
+                $spreadsheetId = $matches[1];
+            }
+
+            if (empty($spreadsheetId)) {
+                return response()->json([
+                    'error' => 'Invalid Google Sheet URL: Could not extract spreadsheet ID.'
+                ], 500);
+            }
+
+            // Sheet name (tab name)
+            $sheetName = $googleLink->spreadsheet_list;
+            $range = "{$sheetName}!A1"; // Start at A1
+
+            // Initialize Google Sheets Service
+            $googleSheetsService = new GoogleSheetsService($credentials, $spreadsheetId);
+
+            // ✅ Write only the header row
+            $googleSheetsService->writeSheet($range, $headerRow);
+
+            // Get total data rows for progress tracking
+            $total = DB::table($tableName)->count();
+
+            return response()->json([
+                'total' => $total,
+                'message' => 'Headers written successfully.'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to write headers: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
