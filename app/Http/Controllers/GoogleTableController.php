@@ -599,117 +599,105 @@ class GoogleTableController extends Controller
     }
 
     /**
-     * Export table to Google Sheet via AJAX with progress updates
-     *
-     * @param string $tableName
-     * @return \Illuminate\Http\JsonResponse
+     * Initialize export: return total row count
      */
-    public function exportRowsAjax($tableName)
+    public function exportInitAjax($tableName)
     {
-        // === Only start/clean buffers if not already flushed ===
-        if (ob_get_level() == 0) {
-            ob_start(); // Start one buffer if none exists
-        } else {
-            // Clean all existing buffers without flushing to browser yet
-            while (ob_get_level()) {
-                ob_end_clean();
-            }
-            ob_start();
+        if (!Schema::hasTable($tableName)) {
+            return response()->json([
+                'error' => 'Table not found'
+            ], 404);
         }
 
-        // Disable compression that could break chunked transfer
-        if (extension_loaded('zlib') && ini_get('zlib.output_compression')) {
-            ini_set('zlib.output_compression', 'Off');
-        }
+        $total = DB::table($tableName)->count();
+
+        return response()->json([
+            'total' => $total
+        ]);
+    }
+
+    /**
+     * Export a single chunk to Google Sheets
+     */
+    public function exportChunkAjax($tableName, Request $request)
+    {
+        $request->validate([
+            'begin' => 'required|integer|min:0',
+            'delta' => 'required|integer|min:1',
+        ]);
+
+        $begin = $request->begin;
+        $delta = $request->delta;
 
         try {
-            $rows = DB::table($tableName)->get()->toArray();
-            if (empty($rows)) {
-                echo json_encode([
-                        'success' => false,
-                        'message' => 'No data to export.',
-                        'progress' => 0,
-                    ]) . "\n";
-                ob_flush();
-                flush();
-                return response('', 200)->header('Content-Type', 'application/x-ndjson');
-            }
-
-            $total = count($rows);
+            // Get table columns
             $columns = Schema::getColumnListing($tableName);
-            $data = [$columns]; // Header row
-
-            $chunkSize = 100;
-            $processed = 0;
-
-            foreach (array_chunk($rows, $chunkSize) as $chunk) {
-                foreach ($chunk as $row) {
-                    $dataRow = [];
-                    foreach ($columns as $column) {
-                        $dataRow[] = $row->$column ?? '';
-                    }
-                    $data[] = $dataRow;
-                }
-                $processed += count($chunk);
-
-                // Send progress update
-                echo json_encode([
-                        'progress' => round(($processed / $total) * 100),
-                        'processed' => $processed,
-                        'total' => $total,
-                        'status' => 'Exporting... please wait.'
-                    ]) . "\n";
-
-                // Flush to client
-                ob_flush();
-                flush();
+            if (empty($columns)) {
+                return response()->json(['error' => 'No columns found'], 400);
             }
 
-            // === Perform Google Sheets Export ===
+            // Fetch chunk of data
+            $rows = DB::table($tableName)
+                ->skip($begin)
+                ->take($delta)
+                ->get()
+                ->toArray();
+
+            if (empty($rows)) {
+                return response()->json(['success' => true, 'written' => 0]);
+            }
+
+            // Prepare data with header only on first chunk
+            $data = [];
+            if ($begin === 0) {
+                $data[] = $columns; // Header row
+            }
+
+            foreach ($rows as $row) {
+                $dataRow = [];
+                foreach ($columns as $column) {
+                    $dataRow[] = $row->$column ?? '';
+                }
+                $data[] = $dataRow;
+            }
+
+            // Get Google Sheet config
             $googleLink = GoogleLink::where('database_table', $tableName)->first();
             if (!$googleLink) {
-                throw new \Exception("Google link not configured for table {$tableName}.");
+                return response()->json(['error' => 'Google link not configured'], 500);
             }
 
             $credentials = json_decode($googleLink->google_config, true);
             $spreadsheetId = '';
             if (!preg_match('#/spreadsheets/d/([a-zA-Z0-9-_]+)#', $googleLink->google_link, $matches)) {
-                throw new \Exception('Spreadsheet ID not found in Google link.');
+                return response()->json(['error' => 'Invalid Google Sheet URL'], 500);
             }
             $spreadsheetId = $matches[1];
             $sheetName = $googleLink->spreadsheet_list;
-            $range = "{$sheetName}!A1";
 
+            // Initialize service
             $googleSheetsService = new GoogleSheetsService($credentials, $spreadsheetId);
+
+            // Calculate start row (A1 = row 1, A2 = row 2, etc.)
+            $startRow = $begin + ($begin === 0 ? 1 : 2); // +1 for header if begin=0
+            $range = "{$sheetName}!A{$startRow}";
+
+            // Write chunk
             $googleSheetsService->writeSheet($range, $data);
 
-            // Final success message
-            echo json_encode([
-                    'success' => true,
-                    'progress' => 100,
-                    'status' => 'Export completed!',
-                    'message' => "Successfully exported {$total} rows to Google Sheets."
-                ]) . "\n";
+            return response()->json([
+                'success' => true,
+                'written' => count($rows),
+                'begin' => $begin,
+                'delta' => $delta
+            ]);
 
         } catch (\Exception $e) {
-            echo json_encode([
-                    'success' => false,
-                    'progress' => 0,
-                    'status' => 'Error occurred',
-                    'message' => 'Export failed: ' . $e->getMessage()
-                ]) . "\n";
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        // === Only end the buffer if one exists ===
-        if (ob_get_level() > 0) {
-            ob_end_flush(); // Ends the current buffer and flushes
-        } else {
-            // If no buffer, just flush any pending output
-            flush();
-        }
-
-        // Ensure response headers are set
-        return response('', 200)->header('Content-Type', 'application/x-ndjson');
     }
 
 }

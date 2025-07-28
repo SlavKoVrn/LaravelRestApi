@@ -59,9 +59,12 @@ Route::get('/google-rows/remove', [GoogleRowController::class, 'removeRows'])->n
 Route::resource('google-links', GoogleLinkController::class);
 Route::resource('google-rows', GoogleRowController::class);
 
-Route::post('/google-tables/export-ajax/{tableName}', [
-    App\Http\Controllers\GoogleTableController::class, 'exportRowsAjax'
-])->name('google-tables.export-ajax');
+Route::get('/google-tables/export-init/{tableName}', [
+    App\Http\Controllers\GoogleTableController::class, 'exportInitAjax'
+])->name('google-tables.export-init');
+Route::post('/google-tables/export-chunk/{tableName}', [
+    App\Http\Controllers\GoogleTableController::class, 'exportChunkAjax'
+])->name('google-tables.export-chunk');
 
 Route::get('/google-tables', [GoogleTableController::class, 'index'])->name('google-tables');
 Route::put('/google-tables/{tableName}/{id}', [GoogleTableController::class, 'update'])->name('google-tables.update');

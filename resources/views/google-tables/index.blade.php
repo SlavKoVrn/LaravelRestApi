@@ -39,9 +39,9 @@
 
     <a href="{{ route('google-tables.import', $tableName) }}" class="btn btn-info mb-3">Import Google Sheet</a>
 
-    <button id="exportAjaxBtn" class="btn btn-warning mb-3" onclick="startExportAjax('{{ $tableName }}')">
-        Export With Progress
-    </button>
+    <a href="javascript:void(0);" class="btn btn-warning mb-3" onclick="startExportProgressive('{{ $tableName }}')">
+        Export with Progress
+    </a>
 
     <!-- Form to select table -->
     <form method="GET" action="{{ route('google-tables') }}" class="mb-4">
@@ -156,17 +156,16 @@
 
 </div>
 
-<div class="modal fade" id="progressModal" tabindex="-1" role="dialog" aria-labelledby="progressModalLabel" aria-hidden="true">
+<!-- Progress Modal -->
+<div class="modal fade" id="progressModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="progressModalLabel">Exporting Data</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+                <h5 class="modal-title">Exporting to Google Sheets</h5>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
             </div>
             <div class="modal-body">
-                <p id="progressStatus">Preparing export...</p>
+                <p id="progressStatus">Fetching total rows...</p>
                 <div class="progress">
                     <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div>
                 </div>
@@ -177,93 +176,96 @@
         </div>
     </div>
 </div>
+
 @endsection
 
 @section('js')
     @include('sidebar_collapse')
 
     <script>
-        function startExportAjax(tableName) {
-            // Show modal
-            $('#progressModal').modal('show');
-            $('#progressBar').css('width', '0%').removeClass('bg-success bg-danger').addClass('progress-bar-animated');
-            $('#progressStatus').text('Starting export...');
+        async function startExportProgressive(tableName) {
+            const $modal = $('#progressModal');
+            const $bar = $('#progressBar');
+            const $status = $('#progressStatus');
 
-            const url = "{{ route('google-tables.export-ajax', ['tableName' => '__TABLE__']) }}".replace('__TABLE__', encodeURIComponent(tableName));
+            $modal.modal('show');
+            $bar.css('width', '0%').removeClass('bg-success bg-danger').addClass('progress-bar-animated');
+            $status.text('Initializing...');
+
             const token = '{{ csrf_token() }}';
+            const initUrl = "{{ route('google-tables.export-init', ['tableName' => '__TABLE__']) }}".replace('__TABLE__', encodeURIComponent(tableName));
+            const chunkUrl = "{{ route('google-tables.export-chunk', ['tableName' => '__TABLE__']) }}".replace('__TABLE__', encodeURIComponent(tableName));
 
-            const reader = fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-Requested-With': 'XMLHttpRequest',
-                },
-                body: '_token=' + token
-            })
-                .then(response => {
-                    const reader = response.body.getReader();
-                    const decoder = new TextDecoder('utf-8');
-                    let buffer = '';
+            try {
+                // Step 1: Get total count
+                const initRes = await fetch(initUrl);
+                const initJson = await initRes.json();
 
-                    function read() {
-                        reader.read().then(({ done, value }) => {
-                            if (done) {
-                                // Done — maybe handle final state
-                                if (!buffer.includes('success')) {
-                                    $('#progressStatus').text('Completed.');
-                                    $('#progressBar').css('width', '100%');
-                                }
-                                setTimeout(() => $('#progressModal').modal('hide'), 1000);
-                                return;
-                            }
+                if (initRes.status !== 200 || initJson.error) {
+                    throw new Error(initJson.error || 'Failed to get row count');
+                }
 
-                            // Append new chunk to buffer
-                            buffer += decoder.decode(value, { stream: true });
+                const total = initJson.total;
+                if (total === 0) {
+                    $status.text('No data to export.');
+                    return;
+                }
 
-                            // Try to parse all complete JSON objects
-                            const lines = buffer.split('\n');
-                            buffer = lines.pop(); // Keep incomplete JSON in buffer
+                const NUM_CHUNKS = 10;
+                const delta = Math.ceil(total / NUM_CHUNKS);
+                let processed = 0;
 
-                            lines.forEach(line => {
-                                if (line.trim() === '') return;
-                                try {
-                                    const data = JSON.parse(line);
+                $status.text(`Total: ${total} rows → ${NUM_CHUNKS} chunks of ~${delta} rows`);
 
-                                    // Update progress bar
-                                    $('#progressBar').css('width', data.progress + '%');
-                                    $('#progressStatus').text(`${data.status} (${data.processed || 0}/${data.total || 0})`);
+                // Step 2: Send 100 sequential chunk requests
+                for (let i = 0; i < NUM_CHUNKS; i++) {
+                    const begin = i * delta;
 
-                                    if (data.success === true) {
-                                        $('#progressBar').removeClass('progress-bar-animated').addClass('bg-success');
-                                        $('#progressStatus').text(data.message);
-                                    }
-
-                                    if (data.success === false) {
-                                        $('#progressBar').removeClass('progress-bar-animated').addClass('bg-danger');
-                                        $('#progressStatus').text('Error: ' + data.message);
-                                    }
-
-                                } catch (e) {
-                                    // Ignore malformed JSON (incomplete)
-                                    console.warn('Failed to parse:', line);
-                                }
-                            });
-
-                            read(); // Continue reading
-                        }).catch(err => {
-                            $('#progressStatus').text('Connection error.');
-                            $('#progressBar').removeClass('progress-bar-animated').addClass('bg-danger');
-                            console.error('Stream error:', err);
+                    try {
+                        const res = await fetch(chunkUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': token
+                            },
+                            body: `begin=${begin}&delta=${delta}&_token=${token}`
                         });
-                    }
 
-                    read();
-                })
-                .catch(err => {
-                    $('#progressStatus').text('Request failed.');
-                    $('#progressBar').removeClass('progress-bar-animated').addClass('bg-danger');
-                    console.error('Fetch error:', err);
-                });
+                        const data = await res.json();
+
+                        if (!data.success) {
+                            throw new Error(data.error || 'Chunk failed');
+                        }
+
+                        processed += data.written;
+
+                        // Update progress
+                        const progress = Math.round(((i + 1) / NUM_CHUNKS) * 100);
+                        $bar.css('width', progress + '%');
+                        $status.text(`Uploaded chunk ${i + 1}/${NUM_CHUNKS} → ${processed}/${total} rows`);
+
+                        // Optional: small delay to avoid rate limits
+                        await new Promise(r => setTimeout(r, 100));
+
+                    } catch (err) {
+                        $bar.removeClass('progress-bar-animated').addClass('bg-danger');
+                        $status.text(`Error at chunk ${i + 1}: ${err.message}`);
+                        console.error(err);
+                        return;
+                    }
+                }
+
+                // Final success
+                $bar.removeClass('progress-bar-animated').addClass('bg-success');
+                $status.text(`✅ Successfully exported ${processed} rows!`);
+                setTimeout(() => $modal.modal('hide'), 1500);
+
+            } catch (err) {
+                $bar.removeClass('progress-bar-animated').addClass('bg-danger');
+                $status.text(`Failed: ${err.message}`);
+                console.error(err);
+            }
         }
     </script>
 
