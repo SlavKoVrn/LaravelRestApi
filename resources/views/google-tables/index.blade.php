@@ -39,6 +39,10 @@
 
     <a href="{{ route('google-tables.import', $tableName) }}" class="btn btn-info mb-3">Import Google Sheet</a>
 
+    <button id="exportAjaxBtn" class="btn btn-warning mb-3" onclick="startExportAjax('{{ $tableName }}')">
+        Export With Progress
+    </button>
+
     <!-- Form to select table -->
     <form method="GET" action="{{ route('google-tables') }}" class="mb-4">
         @csrf
@@ -151,8 +155,116 @@
     @endif
 
 </div>
+
+<div class="modal fade" id="progressModal" tabindex="-1" role="dialog" aria-labelledby="progressModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="progressModalLabel">Exporting Data</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p id="progressStatus">Preparing export...</p>
+                <div class="progress">
+                    <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('js')
     @include('sidebar_collapse')
+
+    <script>
+        function startExportAjax(tableName) {
+            // Show modal
+            $('#progressModal').modal('show');
+            $('#progressBar').css('width', '0%').removeClass('bg-success bg-danger').addClass('progress-bar-animated');
+            $('#progressStatus').text('Starting export...');
+
+            const url = "{{ route('google-tables.export-ajax', ['tableName' => '__TABLE__']) }}".replace('__TABLE__', encodeURIComponent(tableName));
+            const token = '{{ csrf_token() }}';
+
+            const reader = fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: '_token=' + token
+            })
+                .then(response => {
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder('utf-8');
+                    let buffer = '';
+
+                    function read() {
+                        reader.read().then(({ done, value }) => {
+                            if (done) {
+                                // Done — maybe handle final state
+                                if (!buffer.includes('success')) {
+                                    $('#progressStatus').text('Completed.');
+                                    $('#progressBar').css('width', '100%');
+                                }
+                                setTimeout(() => $('#progressModal').modal('hide'), 1000);
+                                return;
+                            }
+
+                            // Append new chunk to buffer
+                            buffer += decoder.decode(value, { stream: true });
+
+                            // Try to parse all complete JSON objects
+                            const lines = buffer.split('\n');
+                            buffer = lines.pop(); // Keep incomplete JSON in buffer
+
+                            lines.forEach(line => {
+                                if (line.trim() === '') return;
+                                try {
+                                    const data = JSON.parse(line);
+
+                                    // Update progress bar
+                                    $('#progressBar').css('width', data.progress + '%');
+                                    $('#progressStatus').text(`${data.status} (${data.processed || 0}/${data.total || 0})`);
+
+                                    if (data.success === true) {
+                                        $('#progressBar').removeClass('progress-bar-animated').addClass('bg-success');
+                                        $('#progressStatus').text(data.message);
+                                    }
+
+                                    if (data.success === false) {
+                                        $('#progressBar').removeClass('progress-bar-animated').addClass('bg-danger');
+                                        $('#progressStatus').text('Error: ' + data.message);
+                                    }
+
+                                } catch (e) {
+                                    // Ignore malformed JSON (incomplete)
+                                    console.warn('Failed to parse:', line);
+                                }
+                            });
+
+                            read(); // Continue reading
+                        }).catch(err => {
+                            $('#progressStatus').text('Connection error.');
+                            $('#progressBar').removeClass('progress-bar-animated').addClass('bg-danger');
+                            console.error('Stream error:', err);
+                        });
+                    }
+
+                    read();
+                })
+                .catch(err => {
+                    $('#progressStatus').text('Request failed.');
+                    $('#progressBar').removeClass('progress-bar-animated').addClass('bg-danger');
+                    console.error('Fetch error:', err);
+                });
+        }
+    </script>
+
 @stop
