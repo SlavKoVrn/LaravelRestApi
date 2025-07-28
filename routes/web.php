@@ -66,6 +66,14 @@ Route::post('/google-tables/export-chunk/{tableName}', [
     App\Http\Controllers\GoogleTableController::class, 'exportChunkAjax'
 ])->name('google-tables.export-chunk');
 
+Route::get('/google-tables/import-init/{tableName}', [
+    App\Http\Controllers\GoogleTableController::class, 'importInitAjax'
+])->name('google-tables.import-init');
+Route::post('/google-tables/import-chunk/{tableName}', [
+    App\Http\Controllers\GoogleTableController::class, 'importChunkAjax'
+])->name('google-tables.import-chunk');
+
+
 Route::get('/google-tables', [GoogleTableController::class, 'index'])->name('google-tables');
 Route::put('/google-tables/{tableName}/{id}', [GoogleTableController::class, 'update'])->name('google-tables.update');
 Route::get('/google-tables/create/{tableName}', [GoogleTableController::class, 'create'])->name('google-tables.create');

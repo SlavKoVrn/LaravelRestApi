@@ -700,4 +700,132 @@ class GoogleTableController extends Controller
         }
     }
 
+    /**
+     * Initialize import: get total row count from Google Sheet
+     */
+    public function importInitAjax($tableName)
+    {
+        try {
+            $googleLink = GoogleLink::where('database_table', $tableName)->first();
+            if (!$googleLink) {
+                return response()->json(['error' => 'Google link not configured'], 404);
+            }
+
+            $credentials = json_decode($googleLink->google_config, true);
+            $spreadsheetId = '';
+            if (!preg_match('#/spreadsheets/d/([a-zA-Z0-9-_]+)#', $googleLink->google_link, $matches)) {
+                return response()->json(['error' => 'Invalid Google Sheet URL'], 400);
+            }
+            $spreadsheetId = $matches[1];
+            $sheetName = $googleLink->spreadsheet_list;
+
+            $googleSheets = new GoogleSheetsService($credentials, $spreadsheetId);
+
+            // Get used range
+            $range = $googleSheets->getUsedRange($sheetName);
+            $values = $googleSheets->readSheet($range);
+
+            if (empty($values)) {
+                return response()->json(['total' => 0]);
+            }
+
+            $total = count($values) - 1; // -1 for header
+            if ($total < 0) $total = 0;
+
+            return response()->json([
+                'total' => $total
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to read sheet: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Import a single chunk from Google Sheets
+     */
+    public function importChunkAjax($tableName, Request $request)
+    {
+        $request->validate([
+            'begin' => 'required|integer|min:0',
+            'delta' => 'required|integer|min:1',
+        ]);
+
+        $begin = $request->begin;
+        $delta = $request->delta;
+
+        try {
+            $googleLink = GoogleLink::where('database_table', $tableName)->first();
+            if (!$googleLink) {
+                return response()->json(['error' => 'Google link not configured'], 500);
+            }
+
+            $credentials = json_decode($googleLink->google_config, true);
+            $spreadsheetId = '';
+            if (!preg_match('#/spreadsheets/d/([a-zA-Z0-9-_]+)#', $googleLink->google_link, $matches)) {
+                return response()->json(['error' => 'Invalid Google Sheet URL'], 500);
+            }
+            $spreadsheetId = $matches[1];
+            $sheetName = $googleLink->spreadsheet_list;
+
+            $googleSheets = new GoogleSheetsService($credentials, $spreadsheetId);
+
+            // Get full data range
+            $range = $googleSheets->getUsedRange($sheetName);
+            $values = $googleSheets->readSheet($range);
+
+            if (empty($values)) {
+                return response()->json(['success' => true, 'written' => 0]);
+            }
+
+            $headers = $values[0];
+            $headers = array_map('trim', $headers);
+            $headers = array_map('Str::snake', $headers);
+
+            $dbColumns = Schema::getColumnListing($tableName);
+            $validColumns = array_intersect($dbColumns, $headers);
+            if (empty($validColumns)) {
+                return response()->json(['error' => 'No matching columns found'], 400);
+            }
+
+            // Slice the data chunk (skip header)
+            $dataRows = array_slice($values, 1);
+            $chunkRows = array_slice($dataRows, $begin, $delta);
+
+            $rowsToInsert = [];
+            foreach ($chunkRows as $row) {
+                $rowData = [];
+                foreach ($headers as $index => $header) {
+                    if (in_array($header, $dbColumns)) {
+                        $value = $index < count($row) ? trim($row[$index]) : null;
+                        $rowData[$header] = $value === '' ? null : $value;
+                    }
+                }
+                if (!empty($rowData)) {
+                    $rowsToInsert[] = $rowData;
+                }
+            }
+
+            if (!empty($rowsToInsert)) {
+                DB::table($tableName)->insertOrIgnore($rowsToInsert);
+            }
+
+            return response()->json([
+                'success' => true,
+                'written' => count($rowsToInsert),
+                'begin' => $begin,
+                'delta' => $delta
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+
 }

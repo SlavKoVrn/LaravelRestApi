@@ -35,12 +35,16 @@
 
     <a href="{{ route('google-tables.truncate', $tableName) }}" class="btn btn-danger mb-3">Remove All Rows</a>
 
-    <a href="{{ route('google-tables.export', $tableName) }}" class="btn btn-warning mb-3">Export Google Sheet</a>
+    <a href="{{ route('google-tables.export', $tableName) }}" class="btn btn-warning mb-3">Export Sheet</a>
 
-    <a href="{{ route('google-tables.import', $tableName) }}" class="btn btn-info mb-3">Import Google Sheet</a>
+    <a href="{{ route('google-tables.import', $tableName) }}" class="btn btn-info mb-3">Import Sheet</a>
 
     <a href="javascript:void(0);" class="btn btn-warning mb-3" onclick="startExportProgressive('{{ $tableName }}')">
         Export with Progress
+    </a>
+
+    <a href="javascript:void(0);" class="btn btn-info mb-3" onclick="startImportProgressive('{{ $tableName }}')">
+        Import with Progress
     </a>
 
     <!-- Form to select table -->
@@ -156,7 +160,7 @@
 
 </div>
 
-<!-- Progress Modal -->
+<!-- Export Progress Modal -->
 <div class="modal fade" id="progressModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -168,6 +172,27 @@
                 <p id="progressStatus">Fetching total rows...</p>
                 <div class="progress">
                     <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Import Progress Modal -->
+<div class="modal fade" id="importProgressModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Importing from Google Sheets</h5>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="importProgressStatus">Fetching total rows...</p>
+                <div class="progress">
+                    <div id="importProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -267,6 +292,94 @@
                 console.error(err);
             }
         }
+
+        async function startImportProgressive(tableName) {
+            const $modal = $('#importProgressModal');
+            const $bar = $('#importProgressBar');
+            const $status = $('#importProgressStatus');
+
+            $modal.modal('show');
+            $bar.css('width', '0%').removeClass('bg-success bg-danger').addClass('progress-bar-animated');
+            $status.text('Initializing...');
+
+            const token = '{{ csrf_token() }}';
+            const initUrl = "{{ route('google-tables.import-init', ['tableName' => '__TABLE__']) }}".replace('__TABLE__', encodeURIComponent(tableName));
+            const chunkUrl = "{{ route('google-tables.import-chunk', ['tableName' => '__TABLE__']) }}".replace('__TABLE__', encodeURIComponent(tableName));
+
+            try {
+                // Step 1: Get total count
+                const initRes = await fetch(initUrl);
+                const initJson = await initRes.json();
+
+                if (initRes.status !== 200 || initJson.error) {
+                    throw new Error(initJson.error || 'Failed to get row count');
+                }
+
+                const total = initJson.total;
+                if (total === 0) {
+                    $status.text('No data to import.');
+                    return;
+                }
+
+                const NUM_CHUNKS = 10;
+                const delta = Math.ceil(total / NUM_CHUNKS);
+                let imported = 0;
+
+                $status.text(`Total: ${total} rows → ${NUM_CHUNKS} chunks of ~${delta} rows`);
+
+                // Step 2: Import 100 chunks
+                for (let i = 0; i < NUM_CHUNKS; i++) {
+                    const begin = i * delta;
+
+                    try {
+                        const res = await fetch(chunkUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                                'X-CSRF-TOKEN': token
+                            },
+                            body: `begin=${begin}&delta=${delta}&_token=${token}`
+                        });
+
+                        const data = await res.json();
+
+                        if (!data.success) {
+                            throw new Error(data.error || 'Chunk failed');
+                        }
+
+                        imported += data.written;
+
+                        // Update progress
+                        const progress = Math.round(((i + 1) / NUM_CHUNKS) * 100);
+                        $bar.css('width', progress + '%');
+                        $status.text(`Imported chunk ${i + 1}/${NUM_CHUNKS} → ${imported}/${total} rows`);
+
+                        // Small delay to avoid rate limits
+                        await new Promise(r => setTimeout(r, 100));
+
+                    } catch (err) {
+                        $bar.removeClass('progress-bar-animated').addClass('bg-danger');
+                        $status.text(`Error at chunk ${i + 1}: ${err.message}`);
+                        console.error(err);
+                        return;
+                    }
+                }
+
+                // Final success
+                $bar.removeClass('progress-bar-animated').addClass('bg-success');
+                $status.text(`✅ Successfully imported ${imported} rows!`);
+                $modal.on('hidden.bs.modal', function () {
+                    location.reload();
+                });
+                setTimeout(() => $modal.modal('hide'), 1500);
+
+            } catch (err) {
+                $bar.removeClass('progress-bar-animated').addClass('bg-danger');
+                $status.text(`Failed: ${err.message}`);
+                console.error(err);
+            }
+        }
+
     </script>
 
 @stop
